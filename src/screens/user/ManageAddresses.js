@@ -13,7 +13,7 @@ import { useAuth } from "../../contexts/AuthContext";
 
 export default function ManageAddresses() {
   const navigation = useNavigation();
-  const { user } = useAuth;
+  const { user } = useAuth();
 
   const [addresses, setAddresses] = useState([]);
 
@@ -64,9 +64,7 @@ export default function ManageAddresses() {
         <View key={a.id} style={styles.card}>
           <View style={styles.rowBetween}>
             <Text style={styles.label}>{a.label}</Text>
-            {a.is_default && (
-              <Text style={styles.defaultTag}>Default</Text>
-            )}
+            {a.is_default && <Text style={styles.defaultTag}>Default</Text>}
           </View>
 
           <Text style={styles.addressText}>{a.address_line}</Text>
@@ -118,8 +116,6 @@ export default function ManageAddresses() {
     </ScrollView>
   );
 }
-
-
 
 // 🎨 STYLES ---------------------------------------------------------
 const styles = StyleSheet.create({

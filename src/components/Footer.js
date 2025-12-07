@@ -19,7 +19,12 @@ export const userTabs = [
 
 export const adminTabs = [
   { key: "Home", label: "Dashboard", icon: "home", path: "AdminHome" },
-  { key: "Products", label: "Products", icon: "shopping-bag", path: "ManageProducts" },
+  {
+    key: "Products",
+    label: "Products",
+    icon: "shopping-bag",
+    path: "ManageProducts",
+  },
   { key: "Orders", label: "Orders", icon: "clipboard", path: "AdminOrders" },
   { key: "Profile", label: "Profile", icon: "user", path: "Profile" },
 ];
@@ -28,7 +33,7 @@ export const adminTabs = [
 // FOOTER COMPONENT
 // ------------------------------
 
-export default function FooterTabsRN({ role = "user" }) {
+export default function Footer({ role = "user" }) {
   const navigation = useNavigation();
   const route = useRoute();
 
@@ -71,10 +76,6 @@ export default function FooterTabsRN({ role = "user" }) {
 
 const styles = StyleSheet.create({
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     height: 60,
     backgroundColor: "#fff",
     flexDirection: "row",
@@ -85,11 +86,9 @@ const styles = StyleSheet.create({
     borderTopColor: "#E5E5E5",
 
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
     shadowOffset: { height: -2 },
-
-    zIndex: 50,
   },
 
   tabBtn: {

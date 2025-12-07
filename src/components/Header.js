@@ -1,45 +1,63 @@
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import React from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  StatusBar,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 
-export default function Header({ title = "Home", showBack = true }) {
+export default function Header({ title = "Home", showBack = false }) {
   const navigation = useNavigation();
 
   return (
-    <View style={styles.header}>
-      {/* Left Section */}
-      <View style={styles.leftContainer}>
-        {showBack && (
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Feather name="arrow-left" size={20} color="#555" />
-          </TouchableOpacity>
-        )}
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        Platform.OS === "android" && { paddingTop: StatusBar.currentHeight },
+      ]}
+    >
+      <View style={styles.header}>
+        {/* Left */}
+        <View style={styles.leftContainer}>
+          {showBack && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Feather name="arrow-left" size={20} color="#333" />
+            </TouchableOpacity>
+          )}
+          <Text style={styles.title}>{title}</Text>
+        </View>
 
-        <Text style={styles.title}>{title}</Text>
+        {/* Right */}
+        <TouchableOpacity style={styles.searchButton}>
+          <Feather name="search" size={20} color="#333" />
+        </TouchableOpacity>
       </View>
-
-      {/* Right Section */}
-      <TouchableOpacity style={styles.searchButton}>
-        <Feather name="search" size={18} color="#555" />
-      </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: "#FFF",
+    zIndex: 100,
+  },
+
   header: {
-    backgroundColor: "#fff",
-    paddingVertical: 12,
+    height: 50,
     paddingHorizontal: 16,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-    elevation: 2,
+    borderBottomColor: "#EEE",
   },
 
   leftContainer: {
@@ -48,22 +66,21 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    backgroundColor: "#f1f1f1",
-    padding: 10,
-    borderRadius: 30,
-    marginRight: 10,
+    marginRight: 12,
+    padding: 8,
+    borderRadius: 50,
+    backgroundColor: "#F2F2F2",
   },
 
   title: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#555",
-    textTransform: "capitalize",
+    color: "#222",
   },
 
   searchButton: {
-    backgroundColor: "#f1f1f1",
     padding: 8,
-    borderRadius: 30,
+    borderRadius: 50,
+    backgroundColor: "#F2F2F2",
   },
 });

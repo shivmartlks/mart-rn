@@ -41,7 +41,7 @@ export default function UserLayout() {
           }
 
           return <Feather name={icon} size={size} color={color} />;
-        }
+        },
       })}
     >
       <Tab.Screen name="UserDashboard" component={UserDashboard} />

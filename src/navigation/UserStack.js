@@ -8,6 +8,7 @@ import ManageAddresses from "../screens/user/ManageAddresses";
 import AddAddress from "../screens/user/AddAddress";
 import EditAddress from "../screens/user/EditAddress";
 import SelectAddress from "../screens/user/SelectAddress";
+import OrderDetails from "../screens/user/OrderDetails";
 
 const Stack = createNativeStackNavigator();
 
@@ -53,6 +54,12 @@ export default function UserStack() {
         name="SelectAddress"
         component={SelectAddress}
         options={{ header: () => <Header title="Select Address" showBack /> }}
+      />
+
+      <Stack.Screen
+        name="OrderDetails"
+        component={OrderDetails}
+        options={{ header: () => <Header title="Order Details" showBack /> }}
       />
     </Stack.Navigator>
   );

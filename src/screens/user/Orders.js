@@ -12,7 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function Orders() {
-  const { user } = useAuth
+  const { user } = useAuth();
   const navigation = useNavigation();
 
   const [orders, setOrders] = useState([]);
