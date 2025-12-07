@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { fetchCategories } from "../../services/adminApi";
+import Button from "../../components/Button/Button";
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
@@ -63,9 +64,9 @@ export default function Categories() {
           style={styles.input}
         />
 
-        <Pressable style={styles.button} onPress={handleAddCategory}>
-          <Text style={styles.buttonText}>Add Category</Text>
-        </Pressable>
+        <Button block onPress={handleAddCategory}>
+          Add Category
+        </Button>
       </View>
 
       {/* Category List */}
@@ -87,7 +88,6 @@ export default function Categories() {
     </ScrollView>
   );
 }
-
 
 // ----------------------------------------------------
 // STYLES
@@ -125,19 +125,6 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     marginBottom: 12,
-  },
-
-  button: {
-    backgroundColor: "#000",
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-
-  buttonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 
   subtitle: {

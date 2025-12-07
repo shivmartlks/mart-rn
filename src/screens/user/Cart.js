@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  Image,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  Alert,
-} from "react-native";
+import { View, Text, Image, ScrollView, StyleSheet, Alert } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
@@ -146,26 +138,28 @@ export default function Cart() {
         <Text style={styles.paymentTitle}>Payment Method</Text>
 
         {/* COD */}
-        <Pressable style={styles.radioRow} onPress={() => setPayment("cod")}>
+        <Button
+          variant="ghost"
+          onPress={() => setPayment("cod")}
+          style={styles.radioRow}
+        >
           <View
-            style={[
-              styles.radioCircle,
-              payment === "cod" && styles.radioActive,
-            ]}
+            style={[styles.radio, payment === "cod" && styles.radioActive]}
           />
-          <Text style={styles.paymentOption}>Cash on Delivery</Text>
-        </Pressable>
+          Cash on Delivery
+        </Button>
 
         {/* Online */}
-        <Pressable style={styles.radioRow} onPress={() => setPayment("online")}>
+        <Button
+          variant="ghost"
+          onPress={() => setPayment("online")}
+          style={styles.radioRow}
+        >
           <View
-            style={[
-              styles.radioCircle,
-              payment === "online" && styles.radioActive,
-            ]}
+            style={[styles.radio, payment === "online" && styles.radioActive]}
           />
-          <Text style={styles.paymentOption}>Online Payment</Text>
-        </Pressable>
+          Online Payment
+        </Button>
       </View>
 
       {/* Checkout Button */}
@@ -272,17 +266,16 @@ const styles = StyleSheet.create({
 
   radioRow: {
     flexDirection: "row",
-    alignItems: "center",
     marginBottom: 10,
+    justifyContent: "flex-start",
   },
 
-  radioCircle: {
+  radio: {
     width: 20,
     height: 20,
     borderRadius: 12,
     borderWidth: 2,
     borderColor: "#999",
-    marginRight: 10,
   },
 
   radioActive: {

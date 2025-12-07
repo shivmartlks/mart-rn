@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Pressable,
   ScrollView,
   Alert,
 } from "react-native";
@@ -12,6 +11,7 @@ import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { Picker } from "@react-native-picker/picker";
+import Button from "../../components/Button/Button";
 
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -28,6 +28,7 @@ export default function AddAddress() {
   const [serviceable, setServiceable] = useState(null);
   const [isDefault, setIsDefault] = useState(false);
   const [isFirstAddress, setIsFirstAddress] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     checkIfFirstAddress();
@@ -92,24 +93,30 @@ export default function AddAddress() {
       return;
     }
 
-    const { error } = await supabase.from("addresses").insert({
-      user_id: user.id,
-      label,
-      address_line: address,
-      pincode,
-      phone,
-      delivery_instructions: instructions,
-      latitude: coords.lat,
-      longitude: coords.lng,
-      is_default: isFirstAddress ? true : isDefault,
-    });
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("addresses").insert({
+        user_id: user.id,
+        label,
+        address_line: address,
+        pincode,
+        phone,
+        delivery_instructions: instructions,
+        latitude: coords.lat,
+        longitude: coords.lng,
+        is_default: isFirstAddress ? true : isDefault,
+      });
 
-    if (error) {
-      Alert.alert("Error", error.message);
-      return;
+      if (error) {
+        throw error;
+      }
+
+      navigation.navigate("Cart");
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to save address.");
+    } finally {
+      setSaving(false);
     }
-
-    navigation.navigate("Cart");
   }
 
   return (
@@ -117,9 +124,9 @@ export default function AddAddress() {
       <Text style={styles.header}>Add Address</Text>
 
       {/* Use Location */}
-      <Pressable style={styles.primaryButton} onPress={getCurrentLocation}>
-        <Text style={styles.primaryButtonText}>Use My Current Location</Text>
-      </Pressable>
+      <Button onPress={getCurrentLocation} style={{ marginBottom: 16 }}>
+        Use My Current Location
+      </Button>
 
       {/* Label Picker */}
       <View style={styles.pickerBox}>
@@ -179,24 +186,27 @@ export default function AddAddress() {
 
       {/* Default Checkbox */}
       {!isFirstAddress && (
-        <Pressable
+        <Button
+          variant="ghost"
           style={styles.checkboxRow}
           onPress={() => setIsDefault(!isDefault)}
         >
-          <View style={[styles.checkbox, isDefault && styles.checkboxChecked]} />
-          <Text style={styles.checkboxLabel}>Set as default address</Text>
-        </Pressable>
+          <>
+            <View
+              style={[styles.checkbox, isDefault && styles.checkboxChecked]}
+            />
+            <Text style={styles.checkboxLabel}>Set as default address</Text>
+          </>
+        </Button>
       )}
 
       {/* Save Button */}
-      <Pressable style={styles.primaryButton} onPress={saveAddress}>
-        <Text style={styles.primaryButtonText}>Save Address</Text>
-      </Pressable>
+      <Button block onPress={saveAddress} loading={saving} disabled={saving}>
+        Save Address
+      </Button>
     </ScrollView>
   );
 }
-
-
 
 // 🎨 STYLES ---------------------------------------------------------
 const styles = StyleSheet.create({
@@ -209,19 +219,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "700",
     marginBottom: 16,
-  },
-
-  primaryButton: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginBottom: 16,
-  },
-  primaryButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 
   pickerBox: {
@@ -255,6 +252,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+    justifyContent: "flex-start",
   },
 
   checkbox: {

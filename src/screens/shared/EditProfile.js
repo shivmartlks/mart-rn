@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  Pressable,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
@@ -11,6 +10,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { getProfile, updateProfile } from "../../services/profileService";
+import Button from "../../components/Button/Button";
 
 export default function EditProfile() {
   const navigation = useNavigation();
@@ -108,31 +108,28 @@ export default function EditProfile() {
 
         {/* Buttons */}
         <View style={styles.buttonRow}>
-          {/* Save */}
-          <Pressable
-            style={[styles.primaryButton, saving && { opacity: 0.6 }]}
+          <Button
             onPress={handleSave}
+            loading={saving}
             disabled={saving}
+            style={{ flex: 1 }}
           >
-            <Text style={styles.primaryText}>
-              {saving ? "Saving..." : "Save Changes"}
-            </Text>
-          </Pressable>
+            Save Changes
+          </Button>
 
-          {/* Cancel */}
-          <Pressable
-            style={styles.secondaryButton}
+          <Button
+            variant="secondary"
             onPress={() => navigation.navigate("Profile")}
+            disabled={saving}
+            style={{ flex: 1 }}
           >
-            <Text style={styles.secondaryText}>Cancel</Text>
-          </Pressable>
+            Cancel
+          </Button>
         </View>
       </View>
     </ScrollView>
   );
 }
-
-
 
 // --------------------------------------------------
 // STYLES
@@ -186,34 +183,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 20,
-  },
-
-  primaryButton: {
-    flex: 1,
-    backgroundColor: "#000",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-
-  primaryText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  secondaryButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: "#CCC",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-
-  secondaryText: {
-    color: "#444",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });

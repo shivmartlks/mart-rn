@@ -4,13 +4,13 @@ import {
   Text,
   TextInput,
   ScrollView,
-  Pressable,
   StyleSheet,
   ActivityIndicator,
   Alert,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { fetchCategories, fetchSubCategories } from "../../services/adminApi";
+import Button from "../../components/Button/Button";
 
 export default function SubCategories() {
   const [categories, setCategories] = useState([]);
@@ -21,6 +21,7 @@ export default function SubCategories() {
     name: "",
     categoryId: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -50,6 +51,7 @@ export default function SubCategories() {
       return;
     }
 
+    setIsSubmitting(true);
     const { error } = await supabase.from("product_subcategories").insert([
       {
         name: newSubcategory.name,
@@ -57,13 +59,15 @@ export default function SubCategories() {
       },
     ]);
 
+    setIsSubmitting(false);
+
     if (error) {
       Alert.alert("Error", error.message);
       return;
     }
 
     // reset & reload
-    setNewSubcategory({ name: "", categoryId: "" });
+    setNewSubcategory({ name: "", categoryId: newSubcategory.categoryId });
     getSubCategories();
   }
 
@@ -89,26 +93,19 @@ export default function SubCategories() {
 
         <View style={styles.dropdown}>
           {categories.map((cat) => (
-            <Pressable
+            <Button
               key={cat.id}
               onPress={() =>
                 setNewSubcategory((p) => ({ ...p, categoryId: cat.id }))
               }
-              style={[
-                styles.option,
-                newSubcategory.categoryId === cat.id && styles.optionSelected,
-              ]}
+              variant={
+                newSubcategory.categoryId === cat.id ? "default" : "ghost"
+              }
+              style={styles.option}
+              textStyle={styles.optionText}
             >
-              <Text
-                style={[
-                  styles.optionText,
-                  newSubcategory.categoryId === cat.id &&
-                    styles.optionTextSelected,
-                ]}
-              >
-                {cat.name}
-              </Text>
-            </Pressable>
+              {cat.name}
+            </Button>
           ))}
         </View>
 
@@ -122,9 +119,14 @@ export default function SubCategories() {
           style={styles.input}
         />
 
-        <Pressable style={styles.button} onPress={handleAddSubcategory}>
-          <Text style={styles.buttonText}>Add</Text>
-        </Pressable>
+        <Button
+          block
+          onPress={handleAddSubcategory}
+          loading={isSubmitting}
+          disabled={isSubmitting}
+        >
+          Add Subcategory
+        </Button>
       </View>
 
       {/* Existing List */}
@@ -193,20 +195,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
 
-  button: {
-    backgroundColor: "#000",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-  buttonText: {
-    color: "#FFF",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-
   subtitle: {
     fontSize: 18,
     fontWeight: "600",
@@ -249,20 +237,10 @@ const styles = StyleSheet.create({
   },
 
   option: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-  },
-
-  optionSelected: {
-    backgroundColor: "#000",
+    justifyContent: "flex-start",
   },
 
   optionText: {
-    fontSize: 16,
-    color: "#333",
-  },
-
-  optionTextSelected: {
-    color: "#FFF",
+    fontWeight: "normal",
   },
 });

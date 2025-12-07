@@ -4,7 +4,6 @@ import {
   Text,
   Image,
   ScrollView,
-  Pressable,
   StyleSheet,
   FlatList,
   ActivityIndicator,
@@ -177,22 +176,20 @@ export default function ProductView() {
 
         {/* Quantity controls */}
         <View style={styles.qtyRow}>
-          <Pressable
+          <Button
+            size="small"
             onPress={() => handleRemove(p)}
             disabled={qty === 0}
-            style={[
-              styles.qtyBtn,
-              qty === 0 ? styles.qtyBtnDisabled : styles.qtyBtnEnabled,
-            ]}
+            style={styles.qtyBtn}
           >
-            <Text>-</Text>
-          </Pressable>
+            -
+          </Button>
 
           <Text style={styles.qtyText}>{qty}</Text>
 
-          <Pressable onPress={() => handleAdd(p)} style={styles.addBtn}>
-            <Text style={styles.addBtnText}>+</Text>
-          </Pressable>
+          <Button size="small" onPress={() => handleAdd(p)}>
+            +
+          </Button>
         </View>
       </View>
     );
@@ -202,25 +199,20 @@ export default function ProductView() {
     <View style={styles.screen}>
       {/* Horizontal category (group) list */}
       <View style={styles.groupTabs}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 12 }}
+        >
           {groups.map((grp) => (
-            <Pressable
+            <Button
               key={grp.id}
               onPress={() => setActiveGroup(grp.id)}
-              style={[
-                styles.groupButton,
-                activeGroup === grp.id && styles.groupButtonActive,
-              ]}
+              variant={activeGroup === grp.id ? "default" : "secondary"}
+              style={styles.groupButton}
             >
-              <Text
-                style={[
-                  styles.groupText,
-                  activeGroup === grp.id && styles.groupTextActive,
-                ]}
-              >
-                {grp.name}
-              </Text>
-            </Pressable>
+              {grp.name}
+            </Button>
           ))}
         </ScrollView>
       </View>
@@ -272,30 +264,11 @@ const styles = StyleSheet.create({
 
   groupTabs: {
     paddingVertical: 10,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderColor: "#DDD",
   },
 
   groupButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    backgroundColor: "#EEE",
-    borderRadius: 20,
     marginRight: 8,
-  },
-
-  groupButtonActive: {
-    backgroundColor: "#111",
-  },
-
-  groupText: {
-    color: "#444",
-    fontSize: 14,
-  },
-  groupTextActive: {
-    color: "#FFF",
-    fontWeight: "600",
+    paddingHorizontal: 12,
   },
 
   productCard: {
@@ -375,38 +348,14 @@ const styles = StyleSheet.create({
 
   qtyBtn: {
     width: 28,
-    height: 28,
-    borderRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  qtyBtnEnabled: {
-    backgroundColor: "#DDD",
-  },
-
-  qtyBtnDisabled: {
-    backgroundColor: "#EEE",
-    opacity: 0.5,
+    paddingHorizontal: 0,
   },
 
   qtyText: {
     fontSize: 14,
     fontWeight: "600",
-  },
-
-  addBtn: {
-    backgroundColor: "#000",
-    width: 28,
-    height: 28,
-    borderRadius: 6,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  addBtnText: {
-    color: "#FFF",
-    fontWeight: "700",
+    minWidth: 20,
+    textAlign: "center",
   },
 
   cartButton: {

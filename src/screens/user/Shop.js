@@ -3,13 +3,13 @@ import {
   View,
   Text,
   Image,
-  Pressable,
   StyleSheet,
   ScrollView,
   FlatList,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
+import Button from "../../components/Button/Button";
 
 export default function Shop() {
   const [categories, setCategories] = useState([]);
@@ -37,30 +37,29 @@ export default function Shop() {
 
   function renderSubcategoryItem(sub) {
     return (
-      <Pressable
+      <Button
         key={sub.id}
         onPress={() => navigation.navigate("ProductView", { id: sub.id })}
+        variant="ghost"
         style={styles.subItem}
+        textStyle={styles.subName}
       >
-        {/* Image */}
-        <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: sub.image_url }}
-            style={styles.image}
-            resizeMode="cover"
-          />
-        </View>
-
-        {/* Name */}
-        <Text style={styles.subName}>{sub.name}</Text>
-      </Pressable>
+        <>
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: sub.image_url }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          </View>
+          {sub.name}
+        </>
+      </Button>
     );
   }
 
   function renderCategory({ item: cat }) {
-    const catSubs = subcategories.filter(
-      (s) => s.category_id === cat.id
-    );
+    const catSubs = subcategories.filter((s) => s.category_id === cat.id);
 
     return (
       <View key={cat.id} style={styles.categoryBox}>
@@ -123,11 +122,11 @@ const styles = StyleSheet.create({
     width: "47%",
     backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#e8e8e8",
+    borderColor: "#E8E8E8",
     borderRadius: 16,
-    overflow: "hidden",
-    padding: 10,
-    alignItems: "center",
+    padding: 0,
+    height: "auto",
+    minHeight: 0,
   },
 
   imageContainer: {
@@ -148,6 +147,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
     color: "#333",
-    textAlign: "center",
+    marginTop: 8,
+    paddingHorizontal: 4,
   },
 });

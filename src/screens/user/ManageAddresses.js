@@ -1,25 +1,19 @@
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  Alert,
-} from "react-native";
+import { View, Text, ScrollView, StyleSheet, Alert } from "react-native";
 import { supabase } from "../../services/supabase";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
+import Button from "../../components/Button/Button";
 
 export default function ManageAddresses() {
   const navigation = useNavigation();
   const { user } = useAuth();
-
+  const isFocused = useIsFocused();
   const [addresses, setAddresses] = useState([]);
 
   useEffect(() => {
-    if (user) loadAddresses();
-  }, [user]);
+    if (user && isFocused) loadAddresses();
+  }, [user, isFocused]);
 
   async function loadAddresses() {
     const { data, error } = await supabase
@@ -74,16 +68,18 @@ export default function ManageAddresses() {
           {/* Action buttons */}
           <View style={styles.buttonRow}>
             {!a.is_default && (
-              <Pressable
-                style={styles.secondaryButton}
+              <Button
+                variant="secondary"
+                style={{ flex: 1 }}
                 onPress={() => setDefaultAddress(a.id)}
               >
-                <Text style={styles.secondaryText}>Set Default</Text>
-              </Pressable>
+                Set Default
+              </Button>
             )}
 
-            <Pressable
-              style={styles.secondaryButton}
+            <Button
+              variant="secondary"
+              style={{ flex: 1 }}
               onPress={() =>
                 navigation.navigate("EditAddress", {
                   id: a.id,
@@ -91,28 +87,25 @@ export default function ManageAddresses() {
                 })
               }
             >
-              <Text style={styles.secondaryText}>Edit</Text>
-            </Pressable>
+              Edit
+            </Button>
 
-            <Pressable
-              style={[styles.secondaryButton, { borderColor: "red" }]}
+            <Button
+              variant="secondary"
+              style={{ flex: 1, borderColor: "red" }}
+              textStyle={{ color: "red" }}
               onPress={() => deleteAddress(a.id)}
             >
-              <Text style={[styles.secondaryText, { color: "red" }]}>
-                Delete
-              </Text>
-            </Pressable>
+              Delete
+            </Button>
           </View>
         </View>
       ))}
 
       {/* Add New Address */}
-      <Pressable
-        style={styles.primaryButton}
-        onPress={() => navigation.navigate("AddAddress")}
-      >
-        <Text style={styles.primaryButtonText}>+ Add New Address</Text>
-      </Pressable>
+      <Button block onPress={() => navigation.navigate("AddAddress")}>
+        + Add New Address
+      </Button>
     </ScrollView>
   );
 }
@@ -174,34 +167,5 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginTop: 16,
     gap: 10,
-  },
-
-  secondaryButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "#CCC",
-    borderRadius: 10,
-    alignItems: "center",
-  },
-
-  secondaryText: {
-    color: "#444",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  primaryButton: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-  primaryButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });

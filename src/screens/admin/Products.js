@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  Pressable,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
@@ -11,11 +10,13 @@ import {
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { fetchGroups, fetchProducts } from "../../services/adminApi";
+import Button from "../../components/Button/Button";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -82,7 +83,9 @@ export default function Products() {
       group_id,
     };
 
+    setIsSubmitting(true);
     const { error } = await supabase.from("products").insert([payload]);
+    setIsSubmitting(false);
 
     if (error) {
       Alert.alert("Error", error.message);
@@ -174,8 +177,8 @@ export default function Products() {
         />
 
         {/* Stock Type Toggle */}
-        <Pressable
-          style={styles.dropdown}
+        <Button
+          variant="secondary"
           onPress={() =>
             setNewProduct((prev) => ({
               ...prev,
@@ -184,45 +187,42 @@ export default function Products() {
             }))
           }
         >
-          <Text style={styles.dropdownText}>
-            {newProduct.stock_type === "quantity"
+          {`Stock Type: ${
+            newProduct.stock_type === "quantity"
               ? "Quantity (pcs)"
-              : "Weight (kg)"}
-          </Text>
-        </Pressable>
+              : "Weight (kg)"
+          }`}
+        </Button>
 
         {/* Group Dropdown */}
         <Text style={styles.dropdownLabel}>Select Group</Text>
         <View style={styles.dropdownBox}>
           <ScrollView style={{ maxHeight: 150 }}>
             {groups.map((g) => (
-              <Pressable
+              <Button
                 key={g.id}
                 onPress={() =>
                   setNewProduct((prev) => ({ ...prev, group_id: g.id }))
                 }
-                style={[
-                  styles.option,
-                  newProduct.group_id === g.id && styles.optionSelected,
-                ]}
+                variant={newProduct.group_id === g.id ? "default" : "ghost"}
+                style={styles.option}
+                textStyle={styles.optionText}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    newProduct.group_id === g.id && styles.optionTextSelected,
-                  ]}
-                >
-                  {g.name}
-                </Text>
-              </Pressable>
+                {g.name}
+              </Button>
             ))}
           </ScrollView>
         </View>
 
         {/* Add Product Button */}
-        <Pressable style={styles.button} onPress={handleAddProduct}>
-          <Text style={styles.buttonText}>Add Product</Text>
-        </Pressable>
+        <Button
+          block
+          onPress={handleAddProduct}
+          loading={isSubmitting}
+          disabled={isSubmitting}
+        >
+          Add Product
+        </Button>
       </View>
 
       {/* Product List */}
@@ -302,48 +302,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  dropdown: {
-    backgroundColor: "#EEE",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-
-  dropdownText: {
-    fontSize: 16,
-    color: "#333",
-  },
-
   option: {
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-  },
-
-  optionSelected: {
-    backgroundColor: "#000",
+    justifyContent: "flex-start",
   },
 
   optionText: {
-    fontSize: 16,
-    color: "#333",
-  },
-
-  optionTextSelected: {
-    color: "#FFF",
-  },
-
-  button: {
-    backgroundColor: "#000",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 12,
-  },
-
-  buttonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "normal",
   },
 
   subtitle: {

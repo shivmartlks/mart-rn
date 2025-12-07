@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
+import Button from "../../components/Button/Button";
 
-export default function SelectAddress({
-  user,
-  selectedAddress,
-  onSelect,
-}) {
+export default function SelectAddress({ user, selectedAddress, onSelect }) {
   const [addresses, setAddresses] = useState([]);
   const navigation = useNavigation();
 
@@ -38,47 +35,42 @@ export default function SelectAddress({
           const isSelected = selectedAddress === addr.id;
 
           return (
-            <Pressable
+            <Button
               key={addr.id}
               onPress={() => onSelect(addr.id)}
-              style={[
-                styles.card,
-                isSelected && styles.cardActive,
-              ]}
+              variant="ghost"
+              style={[styles.card, isSelected && styles.cardActive]}
             >
-              {/* Radio Button */}
-              <View
-                style={[
-                  styles.radioOuter,
-                  isSelected && styles.radioOuterActive,
-                ]}
-              >
-                {isSelected && <View style={styles.radioInner} />}
-              </View>
+              <>
+                {/* Radio Button */}
+                <View
+                  style={[
+                    styles.radioOuter,
+                    isSelected && styles.radioOuterActive,
+                  ]}
+                >
+                  {isSelected && <View style={styles.radioInner} />}
+                </View>
 
-              {/* Address Info */}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>{addr.label}</Text>
-                <Text style={styles.address}>{addr.address_line}</Text>
-                <Text style={styles.sub}>📞 {addr.phone}</Text>
-              </View>
-            </Pressable>
+                {/* Address Info */}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>{addr.label}</Text>
+                  <Text style={styles.address}>{addr.address_line}</Text>
+                  <Text style={styles.sub}>📞 {addr.phone}</Text>
+                </View>
+              </>
+            </Button>
           );
         })}
       </ScrollView>
 
       {/* Add New Address */}
-      <Pressable
-        style={styles.addButton}
-        onPress={() => navigation.navigate("AddAddress")}
-      >
-        <Text style={styles.addButtonText}>+ Add New Address</Text>
-      </Pressable>
+      <Button block onPress={() => navigation.navigate("AddAddress")}>
+        + Add New Address
+      </Button>
     </View>
   );
 }
-
-
 
 // ----------------------------------------------------------
 // STYLES
@@ -94,6 +86,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 12,
     alignItems: "flex-start",
+    justifyContent: "flex-start",
   },
 
   cardActive: {
@@ -140,19 +133,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#666",
     marginTop: 2,
-  },
-
-  addButton: {
-    backgroundColor: "#000",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginTop: 10,
-  },
-
-  addButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });

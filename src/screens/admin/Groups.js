@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TextInput,
-  Pressable,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
@@ -11,12 +10,14 @@ import {
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { fetchGroups, fetchSubCategories } from "../../services/adminApi";
+import Button from "../../components/Button/Button";
 
 export default function Groups() {
   const [subcategories, setSubcategories] = useState([]);
   const [groups, setGroups] = useState([]);
   const [newGroup, setNewGroup] = useState({ name: "", subcategoryId: "" });
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     loadInitial();
@@ -47,6 +48,7 @@ export default function Groups() {
       return;
     }
 
+    setIsSubmitting(true);
     const { error } = await supabase.from("product_groups").insert([
       {
         name: newGroup.name,
@@ -54,12 +56,14 @@ export default function Groups() {
       },
     ]);
 
+    setIsSubmitting(false);
+
     if (error) {
       Alert.alert("Error", "Failed to add group");
       return;
     }
 
-    setNewGroup({ name: "", subcategoryId: "" });
+    setNewGroup({ name: "", subcategoryId: newGroup.subcategoryId });
     loadGroups();
   }
 
@@ -85,26 +89,17 @@ export default function Groups() {
 
         <View style={styles.dropdown}>
           {subcategories.map((sub) => (
-            <Pressable
+            <Button
               key={sub.id}
               onPress={() =>
                 setNewGroup((prev) => ({ ...prev, subcategoryId: sub.id }))
               }
-              style={[
-                styles.option,
-                newGroup.subcategoryId === sub.id && styles.optionSelected,
-              ]}
+              variant={newGroup.subcategoryId === sub.id ? "default" : "ghost"}
+              style={styles.option}
+              textStyle={styles.optionText}
             >
-              <Text
-                style={[
-                  styles.optionText,
-                  newGroup.subcategoryId === sub.id &&
-                    styles.optionTextSelected,
-                ]}
-              >
-                {sub.name}
-              </Text>
-            </Pressable>
+              {sub.name}
+            </Button>
           ))}
         </View>
 
@@ -119,9 +114,14 @@ export default function Groups() {
         />
 
         {/* Add Button */}
-        <Pressable style={styles.button} onPress={handleAddGroup}>
-          <Text style={styles.buttonText}>Add</Text>
-        </Pressable>
+        <Button
+          block
+          onPress={handleAddGroup}
+          loading={isSubmitting}
+          disabled={isSubmitting}
+        >
+          Add Group
+        </Button>
       </View>
 
       {/* Group List */}
@@ -195,21 +195,11 @@ const styles = StyleSheet.create({
   },
 
   option: {
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-  },
-
-  optionSelected: {
-    backgroundColor: "#000",
+    justifyContent: "flex-start",
   },
 
   optionText: {
-    fontSize: 16,
-    color: "#333",
-  },
-
-  optionTextSelected: {
-    color: "#FFF",
+    fontWeight: "normal",
   },
 
   input: {
@@ -220,19 +210,6 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     marginBottom: 12,
-  },
-
-  button: {
-    backgroundColor: "#000",
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-
-  buttonText: {
-    color: "#FFF",
-    fontWeight: "600",
-    fontSize: 16,
   },
 
   subtitle: {

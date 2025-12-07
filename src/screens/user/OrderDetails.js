@@ -5,10 +5,10 @@ import {
   ScrollView,
   StyleSheet,
   ActivityIndicator,
-  Pressable,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import Button from "../../components/Button/Button";
 
 export default function OrderDetails() {
   const navigation = useNavigation();
@@ -20,7 +20,7 @@ export default function OrderDetails() {
 
   useEffect(() => {
     loadOrder();
-  }, []);
+  }, [id]);
 
   async function loadOrder() {
     const { data, error } = await supabase
@@ -53,9 +53,14 @@ export default function OrderDetails() {
       <Text style={styles.header}>Order Details</Text>
 
       {/* Back Button */}
-      <Pressable style={styles.backBtn} onPress={() => navigation.goBack()}>
-        <Text style={styles.backBtnText}>← Back to Orders</Text>
-      </Pressable>
+      <Button
+        variant="ghost"
+        onPress={() => navigation.goBack()}
+        style={styles.backBtn}
+        textStyle={styles.backBtnText}
+      >
+        ← Back to Orders
+      </Button>
 
       {/* Amount + Status */}
       <View style={styles.card}>
@@ -112,8 +117,6 @@ export default function OrderDetails() {
   );
 }
 
-
-
 // 🔥 STATUS BADGE COLORS
 function statusColor(status) {
   switch (status) {
@@ -141,8 +144,6 @@ function statusTextColor(status) {
   }
 }
 
-
-
 // 🎨 STYLES ------------------------------
 const styles = StyleSheet.create({
   container: {
@@ -163,10 +164,12 @@ const styles = StyleSheet.create({
   },
 
   backBtn: {
+    justifyContent: "flex-start",
     marginBottom: 14,
   },
   backBtnText: {
     color: "#555",
+    fontWeight: "normal",
     fontSize: 16,
   },
 

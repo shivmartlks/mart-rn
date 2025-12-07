@@ -1,13 +1,8 @@
 import { useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-} from "react-native";
+import { View, Text, ScrollView, StyleSheet } from "react-native";
 
 // Import your RN-converted admin screens
+import Button from "../../components/Button/Button";
 import CategoriesScreen from "./Categories";
 import SubCategoriesScreen from "./SubCategories";
 import GroupsScreen from "./Groups";
@@ -32,23 +27,14 @@ export default function ManageProducts() {
         contentContainerStyle={styles.tabContainer}
       >
         {tabs.map((tab) => (
-          <Pressable
+          <Button
             key={tab}
             onPress={() => setActiveTab(tab)}
-            style={[
-              styles.tabButton,
-              activeTab === tab && styles.tabButtonActive,
-            ]}
+            variant={activeTab === tab ? "default" : "secondary"}
+            style={styles.tabButton}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab && styles.tabTextActive,
-              ]}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </Text>
-          </Pressable>
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </Button>
         ))}
       </ScrollView>
 
@@ -62,7 +48,6 @@ export default function ManageProducts() {
     </View>
   );
 }
-
 
 // ------------------------------------------------------------
 // STYLES
@@ -100,28 +85,7 @@ const styles = StyleSheet.create({
 
   tabButton: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: "#E5E5E5",
     marginRight: 10,
-  },
-
-  tabButtonActive: {
-    backgroundColor: "#000",
-    shadowColor: "#000",
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: { height: 2 },
-  },
-
-  tabText: {
-    color: "#333",
-    fontSize: 14,
-    fontWeight: "500",
-  },
-
-  tabTextActive: {
-    color: "#FFF",
   },
 
   content: {

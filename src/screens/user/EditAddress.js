@@ -5,7 +5,6 @@ import {
   TextInput,
   StyleSheet,
   ScrollView,
-  Pressable,
   Alert,
   ActivityIndicator,
 } from "react-native";
@@ -13,6 +12,7 @@ import { Picker } from "@react-native-picker/picker";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
+import Button from "../../components/Button/Button";
 export default function EditAddress() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -26,11 +26,12 @@ export default function EditAddress() {
   const [isDefault, setIsDefault] = useState(false);
   const [totalAddresses, setTotalAddresses] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadCount();
     loadAddress();
-  }, []);
+  }, [id, user.id]);
 
   async function loadCount() {
     const { data } = await supabase
@@ -65,25 +66,29 @@ export default function EditAddress() {
   }
 
   async function save() {
-    const { error } = await supabase
-      .from("addresses")
-      .update({
-        label,
-        address_line: address,
-        phone,
-        pincode,
-        delivery_instructions: instructions,
-        is_default: isDefault,
-      })
-      .eq("id", Number(id));
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("addresses")
+        .update({
+          label,
+          address_line: address,
+          phone,
+          pincode,
+          delivery_instructions: instructions,
+          is_default: isDefault,
+        })
+        .eq("id", Number(id));
 
-    if (error) {
-      Alert.alert("Error", error.message);
-      return;
+      if (error) throw error;
+
+      Alert.alert("Success", "Address updated!");
+      navigation.navigate("ManageAddresses");
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to update address.");
+    } finally {
+      setSaving(false);
     }
-
-    Alert.alert("Success", "Address updated!");
-    navigation.navigate("ManageAddresses");
   }
 
   if (loading) {
@@ -145,32 +150,33 @@ export default function EditAddress() {
       />
 
       {/* Default Address Checkbox */}
-      <Pressable
+      <Button
+        variant="ghost"
         style={styles.checkboxRow}
         onPress={() => {
           if (totalAddresses === 1) return;
           setIsDefault(!isDefault);
         }}
       >
-        <View
-          style={[
-            styles.checkbox,
-            isDefault && styles.checkboxChecked,
-            totalAddresses === 1 && { opacity: 0.5 },
-          ]}
-        />
-        <Text style={styles.checkboxLabel}>Set as default address</Text>
-      </Pressable>
+        <>
+          <View
+            style={[
+              styles.checkbox,
+              isDefault && styles.checkboxChecked,
+              totalAddresses === 1 && { opacity: 0.5 },
+            ]}
+          />
+          <Text style={styles.checkboxLabel}>Set as default address</Text>
+        </>
+      </Button>
 
       {/* Save Button */}
-      <Pressable style={styles.primaryButton} onPress={save}>
-        <Text style={styles.primaryButtonText}>Save Changes</Text>
-      </Pressable>
+      <Button block onPress={save} loading={saving} disabled={saving}>
+        Save Changes
+      </Button>
     </ScrollView>
   );
 }
-
-
 
 // 🎨 STYLES ---------------------------------------------------------
 const styles = StyleSheet.create({
@@ -207,6 +213,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
+    justifyContent: "flex-start",
   },
 
   checkbox: {
@@ -225,19 +232,6 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     fontSize: 16,
     color: "#333",
-  },
-
-  primaryButton: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-
-  primaryButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 
   center: {
