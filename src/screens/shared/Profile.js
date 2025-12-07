@@ -11,6 +11,7 @@ import {
 import { supabase } from "../../services/supabase";
 import { getProfile } from "../../services/profileService";
 import { useNavigation } from "@react-navigation/native";
+import Button from "../../components/Button/Button";
 
 export default function Profile() {
   const navigation = useNavigation();
@@ -49,24 +50,19 @@ export default function Profile() {
   return (
     <ScrollView style={styles.container}>
       {/* Dropdown Menu */}
-      <View style={styles.menuBox}>
-        <Pressable
+      <View style={styles.contentWrapper}>
+        <Button
+          variant="ghost"
           onPress={() => navigation.navigate("EditProfile")}
-          style={styles.menuItem}
         >
-          <Text style={styles.menuText}>Edit Profile</Text>
-        </Pressable>
-
-        <Pressable
-          onPress={() => navigation.navigate("Orders")}
-          style={styles.menuItem}
-        >
-          <Text style={styles.menuText}>Orders</Text>
-        </Pressable>
-
-        <Pressable onPress={handleLogout} style={styles.logoutItem}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </Pressable>
+          Edit Profile
+        </Button>
+        <Button variant="ghost" onPress={() => navigation.navigate("Orders")}>
+          Orders
+        </Button>
+        <Button variant="ghost" onPress={handleLogout}>
+          Logout
+        </Button>
       </View>
 
       {/* Profile Content */}
@@ -96,25 +92,25 @@ export default function Profile() {
         </View>
 
         {/* Buttons */}
-        <Pressable
-          style={styles.primaryButton}
+        <Button
+          block
           onPress={() => navigation.navigate("EditProfile")}
+          style={{ marginBottom: 12 }}
         >
-          <Text style={styles.primaryButtonText}>Edit Profile</Text>
-        </Pressable>
+          Edit Profile
+        </Button>
 
-        <Pressable
-          style={styles.secondaryButton}
+        <Button
+          block
+          variant="secondary"
           onPress={() => navigation.navigate("ManageAddresses")}
         >
-          <Text style={styles.secondaryButtonText}>Manage Addresses</Text>
-        </Pressable>
+          Manage Addresses
+        </Button>
       </View>
     </ScrollView>
   );
 }
-
-
 
 // 🎨 STYLES ------------------------------
 const styles = StyleSheet.create({
@@ -127,36 +123,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingTop: 100,
-  },
-
-  menuBox: {
-    marginTop: 10,
-    marginHorizontal: 16,
-    backgroundColor: "#FFF",
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#DDD",
-    overflow: "hidden",
-  },
-
-  menuItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  menuText: {
-    color: "#222",
-    fontSize: 16,
-  },
-
-  logoutItem: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: "#FFF5F5",
-  },
-  logoutText: {
-    color: "#D32F2F",
-    fontSize: 16,
-    fontWeight: "600",
   },
 
   contentWrapper: {
@@ -186,32 +152,6 @@ const styles = StyleSheet.create({
 
   label: {
     color: "#777",
-    fontWeight: "600",
-  },
-
-  primaryButton: {
-    backgroundColor: "#000",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  primaryButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: "#CCC",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    color: "#444",
-    fontSize: 16,
     fontWeight: "600",
   },
 });

@@ -11,6 +11,7 @@ import {
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
+import Button from "../../components/Button/Button";
 
 export default function Cart() {
   const navigation = useNavigation();
@@ -73,7 +74,10 @@ export default function Cart() {
     }
 
     // TODO: convert your placeOrder API into RN version
-    Alert.alert("Order Placed! 🎉", "Your order has been successfully created.");
+    Alert.alert(
+      "Order Placed! 🎉",
+      "Your order has been successfully created."
+    );
 
     navigation.navigate("Orders");
   }
@@ -82,20 +86,13 @@ export default function Cart() {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyText}>Your cart is empty.</Text>
-
-        <Pressable
-          onPress={() => navigation.navigate("Shop")}
-          style={styles.primaryButton}
-        >
-          <Text style={styles.primaryButtonText}>Browse Categories</Text>
-        </Pressable>
+        <Button onPress={() => navigation.navigate("Shop")}>
+          Browse Categories
+        </Button>
       </View>
     );
 
-  if (loading)
-    return (
-      <Text style={{ padding: 20 }}>Loading...</Text>
-    );
+  if (loading) return <Text style={{ padding: 20 }}>Loading...</Text>;
 
   return (
     <ScrollView style={styles.container}>
@@ -103,24 +100,21 @@ export default function Cart() {
       <Text style={styles.sectionTitle}>Delivery Address</Text>
 
       {!defaultAddress ? (
-        <Pressable
-          onPress={() => navigation.navigate("AddAddress")}
-          style={styles.primaryButton}
-        >
-          <Text style={styles.primaryButtonText}>+ Add Address</Text>
-        </Pressable>
+        <Button onPress={() => navigation.navigate("AddAddress")}>
+          + Add Address
+        </Button>
       ) : (
         <View style={styles.addressBox}>
           <Text style={styles.addressLabel}>{defaultAddress.label}</Text>
           <Text style={styles.addressLine}>{defaultAddress.address_line}</Text>
           <Text style={styles.phone}>📞 {defaultAddress.phone}</Text>
 
-          <Pressable
+          <Button
+            variant="secondary"
             onPress={() => navigation.navigate("ManageAddresses")}
-            style={styles.secondaryButton}
           >
-            <Text style={styles.secondaryText}>Change Address</Text>
-          </Pressable>
+            Change Address
+          </Button>
         </View>
       )}
 
@@ -141,9 +135,7 @@ export default function Cart() {
             </Text>
           </View>
 
-          <Text style={styles.itemTotal}>
-            ₹{i.products.price * i.quantity}
-          </Text>
+          <Text style={styles.itemTotal}>₹{i.products.price * i.quantity}</Text>
         </View>
       ))}
 
@@ -154,33 +146,35 @@ export default function Cart() {
         <Text style={styles.paymentTitle}>Payment Method</Text>
 
         {/* COD */}
-        <Pressable
-          style={styles.radioRow}
-          onPress={() => setPayment("cod")}
-        >
-          <View style={[styles.radioCircle, payment === "cod" && styles.radioActive]} />
+        <Pressable style={styles.radioRow} onPress={() => setPayment("cod")}>
+          <View
+            style={[
+              styles.radioCircle,
+              payment === "cod" && styles.radioActive,
+            ]}
+          />
           <Text style={styles.paymentOption}>Cash on Delivery</Text>
         </Pressable>
 
         {/* Online */}
-        <Pressable
-          style={styles.radioRow}
-          onPress={() => setPayment("online")}
-        >
-          <View style={[styles.radioCircle, payment === "online" && styles.radioActive]} />
+        <Pressable style={styles.radioRow} onPress={() => setPayment("online")}>
+          <View
+            style={[
+              styles.radioCircle,
+              payment === "online" && styles.radioActive,
+            ]}
+          />
           <Text style={styles.paymentOption}>Online Payment</Text>
         </Pressable>
       </View>
 
       {/* Checkout Button */}
-      <Pressable onPress={handleOrder} style={styles.checkoutButton}>
-        <Text style={styles.checkoutText}>Place Order</Text>
-      </Pressable>
+      <Button block onPress={handleOrder} style={{ marginBottom: 40 }}>
+        Place Order
+      </Button>
     </ScrollView>
   );
 }
-
-
 
 // ============================
 // 🔥 STYLES
@@ -219,18 +213,6 @@ const styles = StyleSheet.create({
 
   phone: {
     color: "#888",
-  },
-
-  secondaryButton: {
-    marginTop: 10,
-    padding: 10,
-    backgroundColor: "#EFEFEF",
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  secondaryText: {
-    color: "#333",
-    fontWeight: "500",
   },
 
   cartItem: {
@@ -308,20 +290,6 @@ const styles = StyleSheet.create({
     borderColor: "#000",
   },
 
-  checkoutButton: {
-    backgroundColor: "#000",
-    padding: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    marginBottom: 40,
-  },
-
-  checkoutText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
   emptyContainer: {
     padding: 32,
     alignItems: "center",
@@ -330,17 +298,5 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     marginBottom: 12,
-  },
-
-  primaryButton: {
-    backgroundColor: "#000",
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-  },
-
-  primaryButtonText: {
-    color: "#FFF",
-    fontSize: 16,
   },
 });

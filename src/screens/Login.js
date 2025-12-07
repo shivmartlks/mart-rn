@@ -7,19 +7,24 @@ import {
   StyleSheet,
 } from "react-native";
 import { supabase } from "../services/supabase";
+import Button from "../components/Button/Button";
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
     setError("");
+    setLoading(true);
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+
+    setLoading(false);
 
     if (error) {
       setError(error.message);
@@ -27,6 +32,7 @@ export default function Login({ navigation }) {
     }
 
     if (data?.user) {
+      // On successful login, we replace the auth flow with the main app flow.
       navigation.replace("UserDashboard");
     }
   }
@@ -47,16 +53,15 @@ export default function Login({ navigation }) {
       <TextInput
         style={styles.input}
         placeholder="Password"
-        secureTextEntry={false}
+        secureTextEntry={true}
         value={password}
         onChangeText={setPassword}
       />
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
+      <Button block onPress={handleLogin} loading={loading} disabled={loading}>
+        Login
+      </Button>
     </View>
   );
 }
@@ -79,17 +84,6 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 12,
-  },
-  button: {
-    backgroundColor: "black",
-    padding: 15,
-    marginTop: 10,
-    borderRadius: 8,
-  },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    textAlign: "center",
   },
   error: {
     color: "red",

@@ -18,6 +18,7 @@ import {
 } from "../../services/cartService";
 import { IMAGES } from "../../const/imageConst";
 import { useAuth } from "../../contexts/AuthContext";
+import Button from "../../components/Button/Button";
 
 export default function ProductView() {
   const navigation = useNavigation();
@@ -243,12 +244,12 @@ export default function ProductView() {
 
       {/* Floating Cart Button */}
       {cartCount > 0 && (
-        <Pressable
+        <Button
           onPress={() => navigation.navigate("Cart")}
           style={styles.cartButton}
         >
-          <Text style={styles.cartBtnText}>{cartCount} items</Text>
-        </Pressable>
+          {`${cartCount} items in Cart`}
+        </Button>
       )}
     </View>
   );
@@ -417,11 +418,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 25,
     elevation: 5,
-  },
-
-  cartBtnText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });
