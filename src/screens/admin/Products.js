@@ -34,6 +34,7 @@ export default function Products() {
   }, []);
 
   async function loadInitial() {
+    setLoading(true);
     await loadGroups();
     await loadProducts();
     setLoading(false);
@@ -88,7 +89,7 @@ export default function Products() {
       return;
     }
 
-    // Reset form
+    // reset
     setNewProduct({
       name: "",
       description: "",
@@ -104,96 +105,121 @@ export default function Products() {
     loadProducts();
   }
 
+  // ----------------------------------------------------------
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={{ marginTop: 10, color: "#777" }}>Loading...</Text>
       </View>
     );
   }
 
+  // ----------------------------------------------------------
   return (
     <ScrollView style={styles.container}>
-      {/* Title */}
       <Text style={styles.title}>Add New Product</Text>
 
       {/* Add Product Card */}
       <View style={styles.card}>
-        {/* Form Inputs */}
-        <View style={styles.grid}>
-          {[
-            { key: "name", placeholder: "Product Name" },
-            { key: "description", placeholder: "Description" },
-            { key: "mrp", placeholder: "MRP", type: "numeric" },
-            { key: "price", placeholder: "Selling Price", type: "numeric" },
-            { key: "image_url", placeholder: "Image URL" },
-            {
-              key: "stock_value",
-              placeholder: "Stock Quantity",
-              type: "numeric",
-            },
-          ].map(({ key, placeholder, type }) => (
-            <TextInput
-              key={key}
-              placeholder={placeholder}
-              value={newProduct[key]}
-              onChangeText={(val) =>
-                setNewProduct((p) => ({ ...p, [key]: val }))
-              }
-              keyboardType={type}
-              style={styles.input}
-            />
-          ))}
+        {/* Name */}
+        <TextInput
+          placeholder="Product Name"
+          value={newProduct.name}
+          onChangeText={(v) => setNewProduct((p) => ({ ...p, name: v }))}
+          style={styles.input}
+        />
 
-          {/* Stock Type Select */}
-          <Pressable
-            style={styles.dropdown}
-            onPress={() =>
-              setNewProduct((prev) => ({
-                ...prev,
-                stock_type:
-                  prev.stock_type === "quantity" ? "weight" : "quantity",
-              }))
-            }
-          >
-            <Text style={styles.dropdownText}>
-              {newProduct.stock_type === "quantity"
-                ? "Quantity (pcs)"
-                : "Weight (kg)"}
-            </Text>
-          </Pressable>
+        {/* Description */}
+        <TextInput
+          placeholder="Description"
+          value={newProduct.description}
+          onChangeText={(v) => setNewProduct((p) => ({ ...p, description: v }))}
+          style={styles.input}
+        />
 
-          {/* Group Select */}
-          <View style={styles.dropdown}>
-            <Text style={styles.dropdownLabel}>Select Group:</Text>
-            <ScrollView style={{ maxHeight: 150 }}>
-              {groups.map((g) => (
-                <Pressable
-                  key={g.id}
-                  onPress={() =>
-                    setNewProduct((prev) => ({ ...prev, group_id: g.id }))
-                  }
+        {/* MRP */}
+        <TextInput
+          placeholder="MRP"
+          keyboardType="numeric"
+          value={newProduct.mrp}
+          onChangeText={(v) => setNewProduct((p) => ({ ...p, mrp: v }))}
+          style={styles.input}
+        />
+
+        {/* Price */}
+        <TextInput
+          placeholder="Selling Price"
+          keyboardType="numeric"
+          value={newProduct.price}
+          onChangeText={(v) => setNewProduct((p) => ({ ...p, price: v }))}
+          style={styles.input}
+        />
+
+        {/* Image URL */}
+        <TextInput
+          placeholder="Image URL"
+          value={newProduct.image_url}
+          onChangeText={(v) => setNewProduct((p) => ({ ...p, image_url: v }))}
+          style={styles.input}
+        />
+
+        {/* Stock Value */}
+        <TextInput
+          placeholder="Stock Quantity"
+          keyboardType="numeric"
+          value={newProduct.stock_value}
+          onChangeText={(v) => setNewProduct((p) => ({ ...p, stock_value: v }))}
+          style={styles.input}
+        />
+
+        {/* Stock Type Toggle */}
+        <Pressable
+          style={styles.dropdown}
+          onPress={() =>
+            setNewProduct((prev) => ({
+              ...prev,
+              stock_type:
+                prev.stock_type === "quantity" ? "weight" : "quantity",
+            }))
+          }
+        >
+          <Text style={styles.dropdownText}>
+            {newProduct.stock_type === "quantity"
+              ? "Quantity (pcs)"
+              : "Weight (kg)"}
+          </Text>
+        </Pressable>
+
+        {/* Group Dropdown */}
+        <Text style={styles.dropdownLabel}>Select Group</Text>
+        <View style={styles.dropdownBox}>
+          <ScrollView style={{ maxHeight: 150 }}>
+            {groups.map((g) => (
+              <Pressable
+                key={g.id}
+                onPress={() =>
+                  setNewProduct((prev) => ({ ...prev, group_id: g.id }))
+                }
+                style={[
+                  styles.option,
+                  newProduct.group_id === g.id && styles.optionSelected,
+                ]}
+              >
+                <Text
                   style={[
-                    styles.option,
-                    newProduct.group_id === g.id && styles.optionSelected,
+                    styles.optionText,
+                    newProduct.group_id === g.id && styles.optionTextSelected,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.optionText,
-                      newProduct.group_id === g.id && styles.optionTextSelected,
-                    ]}
-                  >
-                    {g.name}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
+                  {g.name}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
 
-        {/* Add Button */}
+        {/* Add Product Button */}
         <Pressable style={styles.button} onPress={handleAddProduct}>
           <Text style={styles.buttonText}>Add Product</Text>
         </Pressable>
@@ -210,7 +236,7 @@ export default function Products() {
             <View key={p.id} style={styles.listItem}>
               <Text style={styles.listText}>
                 {p.name} — ₹{p.price}{" "}
-                <Text style={styles.stockText}>
+                <Text style={styles.listSubText}>
                   ({p.stock_value} {p.stock_unit})
                 </Text>
               </Text>
@@ -221,7 +247,6 @@ export default function Products() {
     </ScrollView>
   );
 }
-
 
 // ----------------------------------------------------
 // STYLES
@@ -238,15 +263,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
 
-  loadingText: {
-    marginTop: 10,
-    fontSize: 16,
-  },
-
   title: {
     fontSize: 20,
     fontWeight: "700",
-    marginBottom: 12,
+    marginBottom: 16,
   },
 
   card: {
@@ -256,36 +276,37 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: "#DDD",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { height: 3 },
-  },
-
-  grid: {
-    gap: 12,
   },
 
   input: {
     backgroundColor: "#FFF",
-    borderRadius: 12,
     borderWidth: 1,
     borderColor: "#DDD",
+    borderRadius: 12,
     padding: 12,
     fontSize: 16,
-  },
-
-  dropdown: {
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 12,
-    padding: 12,
+    marginBottom: 10,
   },
 
   dropdownLabel: {
-    marginBottom: 8,
+    marginTop: 8,
+    marginBottom: 6,
     color: "#555",
     fontSize: 14,
+  },
+
+  dropdownBox: {
+    borderWidth: 1,
+    borderColor: "#DDD",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+
+  dropdown: {
+    backgroundColor: "#EEE",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 10,
   },
 
   dropdownText: {
@@ -295,8 +316,7 @@ const styles = StyleSheet.create({
 
   option: {
     paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: 8,
+    paddingHorizontal: 10,
   },
 
   optionSelected: {
@@ -317,7 +337,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 12,
   },
 
   buttonText: {
@@ -337,7 +357,7 @@ const styles = StyleSheet.create({
   },
 
   listItem: {
-    backgroundColor: "#F7F7F7",
+    backgroundColor: "#FAFAFA",
     borderWidth: 1,
     borderColor: "#E5E5E5",
     padding: 12,
@@ -350,7 +370,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
-  stockText: {
+  listSubText: {
     color: "#777",
     fontSize: 14,
   },

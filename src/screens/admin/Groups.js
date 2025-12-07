@@ -42,7 +42,10 @@ export default function Groups() {
   }
 
   async function handleAddGroup() {
-    if (!newGroup.name.trim() || !newGroup.subcategoryId) return;
+    if (!newGroup.name.trim() || !newGroup.subcategoryId) {
+      Alert.alert("Missing Fields", "Select subcategory and enter a name.");
+      return;
+    }
 
     const { error } = await supabase.from("product_groups").insert([
       {
@@ -60,54 +63,52 @@ export default function Groups() {
     loadGroups();
   }
 
+  // ------------------------------------------------------------------
   if (loading) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 10 }}>Loading...</Text>
+        <Text style={{ marginTop: 10, color: "#777" }}>Loading...</Text>
       </View>
     );
   }
 
+  // ------------------------------------------------------------------
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Add New Group</Text>
 
       {/* Add Group Card */}
       <View style={styles.card}>
-        {/* Subcategory Dropdown (simple fallback version) */}
-        <View style={styles.selectBox}>
-          <Text style={styles.label}>Select Subcategory</Text>
+        {/* Subcategory Dropdown */}
+        <Text style={styles.dropdownLabel}>Select Subcategory</Text>
 
-          <ScrollView style={{ maxHeight: 150 }}>
-            {subcategories.map((sub) => (
-              <Pressable
-                key={sub.id}
-                onPress={() =>
-                  setNewGroup((prev) => ({
-                    ...prev,
-                    subcategoryId: sub.id,
-                  }))
-                }
+        <View style={styles.dropdown}>
+          {subcategories.map((sub) => (
+            <Pressable
+              key={sub.id}
+              onPress={() =>
+                setNewGroup((prev) => ({ ...prev, subcategoryId: sub.id }))
+              }
+              style={[
+                styles.option,
+                newGroup.subcategoryId === sub.id && styles.optionSelected,
+              ]}
+            >
+              <Text
                 style={[
-                  styles.option,
-                  newGroup.subcategoryId === sub.id && styles.optionSelected,
+                  styles.optionText,
+                  newGroup.subcategoryId === sub.id &&
+                    styles.optionTextSelected,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    newGroup.subcategoryId === sub.id && styles.optionTextSelected,
-                  ]}
-                >
-                  {sub.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+                {sub.name}
+              </Text>
+            </Pressable>
+          ))}
         </View>
 
-        {/* Group Name Input */}
+        {/* Input Name */}
         <TextInput
           placeholder="Group Name"
           value={newGroup.name}
@@ -149,13 +150,12 @@ export default function Groups() {
   );
 }
 
-
-// ----------------------------------------------------------
+// ============================================================
 // STYLES
-// ----------------------------------------------------------
+// ============================================================
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    padding: 16,
     backgroundColor: "#F5F5F5",
   },
 
@@ -173,35 +173,30 @@ const styles = StyleSheet.create({
 
   card: {
     backgroundColor: "#FFF",
-    borderRadius: 16,
     padding: 16,
-    marginBottom: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#E5E5E5",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { height: 3 },
+    marginBottom: 20,
   },
 
-  selectBox: {
+  dropdownLabel: {
+    fontSize: 14,
+    color: "#555",
+    marginBottom: 8,
+  },
+
+  dropdown: {
     borderWidth: 1,
     borderColor: "#DDD",
     borderRadius: 12,
-    padding: 10,
+    overflow: "hidden",
     marginBottom: 12,
-  },
-
-  label: {
-    fontSize: 14,
-    color: "#666",
-    marginBottom: 6,
   },
 
   option: {
     paddingVertical: 10,
     paddingHorizontal: 8,
-    borderRadius: 8,
   },
 
   optionSelected: {
@@ -229,15 +224,15 @@ const styles = StyleSheet.create({
 
   button: {
     backgroundColor: "#000",
-    borderRadius: 12,
     paddingVertical: 14,
+    borderRadius: 12,
     alignItems: "center",
   },
 
   buttonText: {
     color: "#FFF",
-    fontSize: 16,
     fontWeight: "600",
+    fontSize: 16,
   },
 
   subtitle: {
@@ -247,12 +242,11 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: "#888",
-    marginTop: 5,
+    color: "#777",
   },
 
   listItem: {
-    backgroundColor: "#F7F7F7",
+    backgroundColor: "#FAFAFA",
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
@@ -262,7 +256,7 @@ const styles = StyleSheet.create({
 
   listText: {
     fontSize: 16,
-    color: "#222",
+    color: "#333",
   },
 
   listSubText: {

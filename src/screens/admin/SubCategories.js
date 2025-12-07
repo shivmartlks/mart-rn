@@ -10,10 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { supabase } from "../../services/supabase";
-import {
-  fetchCategories,
-  fetchSubCategories,
-} from "../../services/adminApi";
+import { fetchCategories, fetchSubCategories } from "../../services/adminApi";
 
 export default function SubCategories() {
   const [categories, setCategories] = useState([]);
@@ -65,12 +62,12 @@ export default function SubCategories() {
       return;
     }
 
+    // reset & reload
     setNewSubcategory({ name: "", categoryId: "" });
     getSubCategories();
   }
 
-  // ------------------------------------------------------------------
-
+  // ============================= LOADING =============================
   if (loading) {
     return (
       <View style={styles.center}>
@@ -80,45 +77,42 @@ export default function SubCategories() {
     );
   }
 
+  // ============================= CONTENT =============================
   return (
     <ScrollView style={styles.container}>
-      {/* Title */}
       <Text style={styles.title}>Add New Subcategory</Text>
 
-      {/* Add Subcategory Card */}
+      {/* Add Subcategory */}
       <View style={styles.card}>
+        {/* Category Select */}
+        <Text style={styles.dropdownLabel}>Select Category</Text>
 
-        {/* Category Dropdown */}
         <View style={styles.dropdown}>
-          <Text style={styles.dropdownLabel}>Select Category:</Text>
-
-          <ScrollView style={{ maxHeight: 150 }}>
-            {categories.map((cat) => (
-              <Pressable
-                key={cat.id}
-                onPress={() =>
-                  setNewSubcategory((p) => ({ ...p, categoryId: cat.id }))
-                }
+          {categories.map((cat) => (
+            <Pressable
+              key={cat.id}
+              onPress={() =>
+                setNewSubcategory((p) => ({ ...p, categoryId: cat.id }))
+              }
+              style={[
+                styles.option,
+                newSubcategory.categoryId === cat.id && styles.optionSelected,
+              ]}
+            >
+              <Text
                 style={[
-                  styles.option,
-                  newSubcategory.categoryId === cat.id && styles.optionSelected,
+                  styles.optionText,
+                  newSubcategory.categoryId === cat.id &&
+                    styles.optionTextSelected,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    newSubcategory.categoryId === cat.id &&
-                      styles.optionTextSelected,
-                  ]}
-                >
-                  {cat.name}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+                {cat.name}
+              </Text>
+            </Pressable>
+          ))}
         </View>
 
-        {/* Subcategory Name */}
+        {/* Input */}
         <TextInput
           placeholder="Subcategory Name"
           value={newSubcategory.name}
@@ -128,13 +122,12 @@ export default function SubCategories() {
           style={styles.input}
         />
 
-        {/* Add Button */}
         <Pressable style={styles.button} onPress={handleAddSubcategory}>
           <Text style={styles.buttonText}>Add</Text>
         </Pressable>
       </View>
 
-      {/* Subcategory List */}
+      {/* Existing List */}
       <View style={styles.card}>
         <Text style={styles.subtitle}>All Subcategories</Text>
 
@@ -162,9 +155,7 @@ export default function SubCategories() {
   );
 }
 
-// ===================================================================
-// STYLES
-// ===================================================================
+// ============================= STYLES =============================
 const styles = StyleSheet.create({
   container: {
     padding: 16,
@@ -181,7 +172,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 12,
-    color: "#111",
   },
 
   card: {
@@ -189,7 +179,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#DDD",
+    borderColor: "#E0E0E0",
     marginBottom: 20,
   },
 
@@ -229,7 +219,7 @@ const styles = StyleSheet.create({
 
   listItem: {
     padding: 12,
-    backgroundColor: "#F7F7F7",
+    backgroundColor: "#FAFAFA",
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E5E5",
@@ -245,25 +235,22 @@ const styles = StyleSheet.create({
     color: "#888",
   },
 
-  // Dropdown
   dropdown: {
     borderWidth: 1,
     borderColor: "#DDD",
     borderRadius: 12,
-    padding: 12,
+    overflow: "hidden",
     marginBottom: 10,
   },
 
   dropdownLabel: {
     marginBottom: 8,
     color: "#555",
-    fontSize: 14,
   },
 
   option: {
     paddingVertical: 10,
     paddingHorizontal: 8,
-    borderRadius: 8,
   },
 
   optionSelected: {

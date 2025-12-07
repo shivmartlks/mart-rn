@@ -2,24 +2,17 @@ import { View, Text, StyleSheet, ScrollView } from "react-native";
 
 export default function AdminDashboard() {
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Admin Home</Text>
-      </View>
+    <ScrollView style={styles.container}>
+      <Text style={styles.pageTitle}>Admin Home</Text>
 
-      {/* Main Content */}
-      <ScrollView contentContainerStyle={styles.main}>
-        <View style={styles.card}>
-          <Text style={styles.cardText}>
-            Welcome to the admin dashboard. Add widgets here.
-          </Text>
-        </View>
-      </ScrollView>
-    </View>
+      <View style={styles.card}>
+        <Text style={styles.cardText}>
+          Welcome to the admin dashboard. Add widgets here.
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
-
 
 // ----------------------------------------------------
 // STYLES
@@ -27,28 +20,14 @@ export default function AdminDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F5F5", // bg-app
-  },
-
-  header: {
     padding: 20,
-    backgroundColor: "#FFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    shadowOffset: { height: 2 },
+    backgroundColor: "#F5F5F5",
   },
 
-  headerTitle: {
+  pageTitle: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#111",
-  },
-
-  main: {
-    padding: 20,
+    marginBottom: 16,
   },
 
   card: {
@@ -57,10 +36,6 @@ const styles = StyleSheet.create({
     borderColor: "#E5E5E5",
     borderRadius: 16,
     padding: 20,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { height: 3 },
   },
 
   cardText: {
