@@ -7,16 +7,23 @@ import {
   Pressable,
   StyleSheet,
   FlatList,
+  ActivityIndicator,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { addToCart, removeFromCart, getCartCount } from "../../services/cartService";
+import {
+  addToCart,
+  removeFromCart,
+  getCartCount,
+} from "../../services/cartService";
 import { IMAGES } from "../../const/imageConst";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function ProductView() {
   const navigation = useNavigation();
   const route = useRoute();
-  const { subcategoryId, user } = route.params;
+  const { user } = useAuth();
+  const { id: subcategoryId } = route.params;
 
   const [groups, setGroups] = useState([]);
   const [products, setProducts] = useState([]);
@@ -30,8 +37,8 @@ export default function ProductView() {
   // Load data
   // ------------------------------------
   useEffect(() => {
-    if (subcategoryId) fetchData(subcategoryId);
-  }, [subcategoryId]);
+    if (subcategoryId && user) fetchData(subcategoryId);
+  }, [subcategoryId, user]);
 
   async function fetchData(id) {
     setLoading(true);
@@ -58,7 +65,7 @@ export default function ProductView() {
       if (user) {
         const count = await getCartCount(user.id);
         setCartCount(count);
-        loadCartItems();
+        await loadCartItems();
       }
     } catch (err) {
       console.error(err);
@@ -120,7 +127,8 @@ export default function ProductView() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <Text>Loading products...</Text>
+        <ActivityIndicator size="large" color="#000" />
+        <Text style={{ marginTop: 10 }}>Loading products...</Text>
       </View>
     );
   }
@@ -245,8 +253,6 @@ export default function ProductView() {
     </View>
   );
 }
-
-
 
 // --------------------------------------------------------
 // STYLES

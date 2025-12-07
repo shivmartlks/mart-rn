@@ -15,12 +15,7 @@ export default function Header({ title = "Home", showBack = false }) {
   const navigation = useNavigation();
 
   return (
-    <SafeAreaView
-      style={[
-        styles.safeArea,
-        Platform.OS === "android" && { paddingTop: StatusBar.currentHeight },
-      ]}
-    >
+    <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         {/* Left */}
         <View style={styles.leftContainer}>
