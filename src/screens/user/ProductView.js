@@ -259,7 +259,7 @@ export default function ProductView() {
       {/* Floating Cart Button */}
       {cartCount > 0 && (
         <Button
-          onPress={() => navigation.navigate("Cart")}
+          onPress={() => navigation.navigate("UserTabs", { screen: "Cart" })}
           style={styles.cartButton}
         >
           {`${cartCount} items in Cart`}
