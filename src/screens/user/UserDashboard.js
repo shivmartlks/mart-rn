@@ -87,15 +87,15 @@ export default function UserDashboard() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#F5F5F5",
+    paddingTop: 0,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
   },
 
   heading: {
     fontSize: 20,
     fontWeight: "600",
-    marginBottom: 20,
+    marginBottom: 16, // Reduced margin for better spacing
   },
 
   infoBlue: {

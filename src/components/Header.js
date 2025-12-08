@@ -15,7 +15,7 @@ export default function Header({ title = "Home", showBack = false }) {
   const navigation = useNavigation();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <View style={styles.header}>
         {/* Left */}
         <View style={styles.leftContainer}>
@@ -41,7 +41,7 @@ export default function Header({ title = "Home", showBack = false }) {
 
 const styles = StyleSheet.create({
   safeArea: {
-    backgroundColor: "#FFF",
+    backgroundColor: "#FFFFFF", // Only background color for the safe area
     zIndex: 100,
   },
 
@@ -51,8 +51,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderBottomWidth: 1,
-    borderBottomColor: "#EEE",
+    borderBottomWidth: 1, // This should be on the header View
+    borderBottomColor: "#EEE", // This should be on the header View
   },
 
   leftContainer: {

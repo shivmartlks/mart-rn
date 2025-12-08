@@ -7,10 +7,12 @@ import {
   ScrollView,
   FlatList,
   Pressable,
+  Alert,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
 import { colors, textSizes, radius } from "../../Theme/theme";
+import { IMAGES } from "../../const/imageConst";
 
 export default function Shop() {
   const [categories, setCategories] = useState([]);
@@ -45,7 +47,7 @@ export default function Shop() {
       >
         <View style={styles.imageContainer}>
           <Image
-            source={{ uri: sub.image_url }}
+            source={sub.image_url ? { uri: sub.image_url } : IMAGES.default}
             style={styles.image}
             resizeMode="cover"
           />
@@ -119,12 +121,11 @@ const styles = StyleSheet.create({
     padding: 4,
     alignItems: "center",
   },
-
   imageContainer: {
     backgroundColor: colors.white50,
     borderColor: colors.gray200,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 8,
     width: "100%",
     overflow: "hidden",
     marginBottom: 2,
@@ -133,9 +134,9 @@ const styles = StyleSheet.create({
   },
 
   image: {
+    // This style will now apply to both remote and local images
     width: "100%",
     height: "100%",
-    borderRadius: 4,
   },
 
   subName: {

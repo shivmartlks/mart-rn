@@ -8,9 +8,11 @@ import {
   FlatList,
   Pressable,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { Feather } from "@expo/vector-icons";
 import {
   addToCart,
   removeFromCart,
@@ -143,56 +145,55 @@ export default function ProductView() {
 
     return (
       <View style={styles.productCard}>
-        {/* Product Image */}
-        {p.image_url ? (
-          <Image
-            source={{ uri: p.image_url }}
-            style={styles.productImage}
-            resizeMode="cover"
-          />
-        ) : (
-          <View style={styles.placeholderBox}>
+        <Pressable
+          onPress={() => navigation.navigate("ProductDetails", { product: p })}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.imageWrapper}>
             <Image
-              source={IMAGES.default}
-              style={{ width: 80, height: 80 }}
-              resizeMode="contain"
+              source={p.image_url ? { uri: p.image_url } : IMAGES.default}
+              style={styles.productImage}
             />
+
+            {/* Floating ADD / Qty (unchanged) */}
+            {qty === 0 ? (
+              <TouchableOpacity
+                onPress={() => handleAdd(p)}
+                style={styles.addFloatingBtn}
+              >
+                <Text style={styles.addFloatingText}>ADD</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.qtyFloatingBox}>
+                <Pressable
+                  style={styles.qtyBtnSmall}
+                  onPress={() => handleRemove(p)}
+                >
+                  <Text style={styles.qtyBtnText}>−</Text>
+                </Pressable>
+
+                <Text style={styles.qtyNumberFloating}>{qty}</Text>
+
+                <Pressable
+                  style={styles.qtyBtnSmall}
+                  onPress={() => handleAdd(p)}
+                >
+                  <Text style={styles.qtyBtnText}>+</Text>
+                </Pressable>
+              </View>
+            )}
           </View>
-        )}
 
-        <Text style={styles.productName}>{p.name}</Text>
-        <Text style={styles.shortDesc} numberOfLines={1}>
-          {p.short_desc || p.description || "—"}
-        </Text>
+          <Text style={styles.productName}>{p.name}</Text>
+          <Text style={styles.shortDesc} numberOfLines={1}>
+            {p.short_desc || p.description}
+          </Text>
 
-        {/* Discount */}
-        <Text style={styles.discountBadge}>
-          {(((p.mrp - p.price) / p.mrp) * 100).toFixed(0)}% OFF
-        </Text>
-
-        {/* Price Row */}
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>₹{p.price}</Text>
-          <Text style={styles.mrp}>₹{p.mrp}</Text>
-        </View>
-
-        {/* Quantity controls */}
-        <View style={styles.qtyRow}>
-          <Button
-            size="small"
-            onPress={() => handleRemove(p)}
-            disabled={qty === 0}
-            style={styles.qtyBtn}
-          >
-            -
-          </Button>
-
-          <Text style={styles.qtyText}>{qty}</Text>
-
-          <Button size="small" onPress={() => handleAdd(p)}>
-            +
-          </Button>
-        </View>
+          <View style={styles.priceRow}>
+            <Text style={styles.price}>₹{p.price}</Text>
+            <Text style={styles.mrp}>₹{p.mrp}</Text>
+          </View>
+        </Pressable>
       </View>
     );
   };
@@ -233,9 +234,21 @@ export default function ProductView() {
           {/* Right Pane Header (for filters) */}
           <View style={styles.rightHeader}>
             <Text style={styles.rightHeaderText}>
-              {groups.find((g) => g.id === activeGroup)?.name}
+              {/* {groups.find((g) => g.id === activeGroup)?.name} */}
             </Text>
-            {/* You can add filter buttons here */}
+            <View style={styles.headerActions}>
+              <TouchableOpacity style={styles.actionButton}>
+                <Feather name="sliders" size={16} color={colors.black500} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionButton}>
+                <Feather
+                  name="bar-chart-2"
+                  size={16}
+                  color={colors.black500}
+                  style={{ transform: [{ rotate: "90deg" }] }}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Product Grid */}
@@ -321,12 +334,25 @@ const styles = StyleSheet.create({
   },
   rightHeader: {
     padding: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: colors.gray200,
   },
   rightHeaderText: {
     fontSize: 14,
     fontWeight: "600",
+  },
+  headerActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  actionButton: {
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.gray200,
   },
 
   productCard: {
@@ -342,18 +368,9 @@ const styles = StyleSheet.create({
 
   productImage: {
     width: "100%",
-    height: 80,
-    borderRadius: 12,
+    aspectRatio: 1, // Creates a square image
     marginBottom: 8,
-  },
-
-  placeholderBox: {
-    width: "100%",
-    backgroundColor: "#EEE",
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 8,
+    backgroundColor: "#F0F0F0", // Background for the placeholder
   },
 
   productName: {
@@ -404,11 +421,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  qtyBtn: {
-    width: 28,
-    paddingHorizontal: 0,
-  },
-
   qtyText: {
     fontSize: 14,
     fontWeight: "600",
@@ -425,5 +437,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 25,
     elevation: 5,
+  },
+
+  // Floating ADD Button
+  addFloatingBtn: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    backgroundColor: colors.white50,
+    borderWidth: 0.8, // thinner border
+    borderColor: colors.green300, // softer shade
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    elevation: 2, // lighter shadow
+  },
+  addFloatingText: {
+    color: colors.green600,
+    fontWeight: "700",
+    fontSize: 11,
+  },
+
+  // Floating Qty Controller
+  qtyFloatingBox: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    backgroundColor: colors.green50,
+    borderWidth: 0.8, // thin border
+    borderColor: colors.green300,
+    borderRadius: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    elevation: 2,
+  },
+
+  qtyBtnSmall: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 0.8, // thinner
+    borderColor: colors.green300, // lighter shade
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.white50,
+  },
+  qtyBtnText: {
+    color: colors.green600,
+    fontSize: 16,
+    fontWeight: "700",
+    marginTop: -2,
+  },
+
+  qtyNumberFloating: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.green600,
   },
 });
