@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   FlatList,
+  Pressable,
   ActivityIndicator,
 } from "react-native";
 import { supabase } from "../../services/supabase";
@@ -18,6 +19,7 @@ import {
 import { IMAGES } from "../../const/imageConst";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/Button/Button";
+import { colors, textSizes, radius } from "../../Theme/theme";
 
 export default function ProductView() {
   const navigation = useNavigation();
@@ -195,44 +197,64 @@ export default function ProductView() {
     );
   };
 
+  // ------------------------------------
+  // Render Group Item (Sidebar)
+  // ------------------------------------
+  const renderGroupItem = ({ item: grp }) => {
+    const isActive = activeGroup === grp.id;
+    return (
+      <Pressable
+        key={grp.id}
+        onPress={() => setActiveGroup(grp.id)}
+        style={[styles.groupItem, isActive && styles.activeGroupItem]}
+      >
+        <Text style={[styles.groupName, isActive && styles.activeGroupName]}>
+          {grp.name}
+        </Text>
+      </Pressable>
+    );
+  };
+
   return (
     <View style={styles.screen}>
-      {/* Horizontal category (group) list */}
-      <View style={styles.groupTabs}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 12 }}
-        >
-          {groups.map((grp) => (
-            <Button
-              key={grp.id}
-              onPress={() => setActiveGroup(grp.id)}
-              variant={activeGroup === grp.id ? "default" : "secondary"}
-              style={styles.groupButton}
-            >
-              {grp.name}
-            </Button>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Product Grid */}
-      {filteredProducts.length === 0 ? (
-        <View style={styles.center}>
-          <Text>No products available in this group.</Text>
+      <View style={styles.mainContent}>
+        {/* Left Pane: Group Sidebar */}
+        <View style={styles.sidebar}>
+          <FlatList
+            data={groups}
+            renderItem={renderGroupItem}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+          />
         </View>
-      ) : (
-        <FlatList
-          data={filteredProducts}
-          renderItem={renderProduct}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={2}
-          columnWrapperStyle={{ justifyContent: "space-between" }}
-          contentContainerStyle={{ paddingBottom: 120 }}
-          style={{ paddingHorizontal: 12 }}
-        />
-      )}
+
+        {/* Right Pane: Products */}
+        <View style={styles.productArea}>
+          {/* Right Pane Header (for filters) */}
+          <View style={styles.rightHeader}>
+            <Text style={styles.rightHeaderText}>
+              {groups.find((g) => g.id === activeGroup)?.name}
+            </Text>
+            {/* You can add filter buttons here */}
+          </View>
+
+          {/* Product Grid */}
+          {filteredProducts.length === 0 ? (
+            <View style={styles.center}>
+              <Text>No products available in this group.</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              renderItem={renderProduct}
+              keyExtractor={(item) => item.id.toString()}
+              numColumns={2}
+              contentContainerStyle={{ paddingHorizontal: 8 }}
+              columnWrapperStyle={{ gap: 8 }}
+            />
+          )}
+        </View>
+      </View>
 
       {/* Floating Cart Button */}
       {cartCount > 0 && (
@@ -253,44 +275,80 @@ export default function ProductView() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: colors.white50,
   },
-
+  mainContent: {
+    flex: 1,
+    flexDirection: "row",
+  },
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
 
-  groupTabs: {
-    paddingVertical: 10,
+  // Sidebar (Left Pane)
+  sidebar: {
+    width: "28%",
+    backgroundColor: "#F8F8F8",
+    borderRightWidth: 1,
+    borderRightColor: colors.gray200,
+  },
+  groupItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  activeGroupItem: {
+    backgroundColor: colors.white50,
+    borderLeftColor: colors.black800,
+    borderLeftWidth: 3,
+  },
+  groupName: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: colors.black500,
+  },
+  activeGroupName: {
+    fontWeight: "700",
+    color: colors.black800,
   },
 
-  groupButton: {
-    marginRight: 8,
-    paddingHorizontal: 12,
+  // Product Area (Right Pane)
+  productArea: {
+    flex: 1,
+  },
+  rightHeader: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+  rightHeaderText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
 
   productCard: {
-    width: "48%",
-    backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 16,
+    flex: 1, // Allow items to expand and fill their column space
+    backgroundColor: colors.white50,
+    padding: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#DDD",
-    marginBottom: 16,
+    borderColor: colors.gray200,
+    marginBottom: 8,
+    maxWidth: "50%",
   },
 
   productImage: {
     width: "100%",
-    height: 120,
+    height: 80,
     borderRadius: 12,
     marginBottom: 8,
   },
 
   placeholderBox: {
     width: "100%",
-    height: 120,
     backgroundColor: "#EEE",
     borderRadius: 12,
     justifyContent: "center",
@@ -299,13 +357,13 @@ const styles = StyleSheet.create({
   },
 
   productName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "600",
-    color: "#222",
+    color: colors.black800,
   },
 
   shortDesc: {
-    fontSize: 12,
+    fontSize: 10,
     color: "#777",
     marginBottom: 6,
   },
@@ -313,9 +371,9 @@ const styles = StyleSheet.create({
   discountBadge: {
     backgroundColor: "#DCFCE7",
     color: "#15803D",
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 4,
     fontSize: 10,
     fontWeight: "600",
     alignSelf: "flex-start",
@@ -329,14 +387,14 @@ const styles = StyleSheet.create({
   },
 
   price: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
   },
 
   mrp: {
-    fontSize: 12,
+    fontSize: 10,
     textDecorationLine: "line-through",
-    color: "#777",
+    color: colors.gray500,
   },
 
   qtyRow: {

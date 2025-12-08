@@ -6,10 +6,11 @@ import {
   StyleSheet,
   ScrollView,
   FlatList,
+  Pressable,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
-import Button from "../../components/Button/Button";
+import { colors, textSizes, radius } from "../../Theme/theme";
 
 export default function Shop() {
   const [categories, setCategories] = useState([]);
@@ -37,24 +38,20 @@ export default function Shop() {
 
   function renderSubcategoryItem(sub) {
     return (
-      <Button
+      <Pressable
         key={sub.id}
         onPress={() => navigation.navigate("ProductView", { id: sub.id })}
-        variant="ghost"
         style={styles.subItem}
-        textStyle={styles.subName}
       >
-        <>
-          <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: sub.image_url }}
-              style={styles.image}
-              resizeMode="cover"
-            />
-          </View>
-          {sub.name}
-        </>
-      </Button>
+        <View style={styles.imageContainer}>
+          <Image
+            source={{ uri: sub.image_url }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        </View>
+        <Text style={styles.subName}>{sub.name}</Text>
+      </Pressable>
     );
   }
 
@@ -93,61 +90,59 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: "#F5F5F5",
   },
 
   categoryBox: {
-    marginBottom: 28,
+    marginBottom: 16,
   },
 
   categoryName: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "600",
-    color: "#222",
-    marginBottom: 12,
+    color: colors.black800,
+    marginBottom: 4,
   },
 
   noSubs: {
-    fontSize: 14,
-    color: "#777",
+    fontSize: 12,
+    color: colors.black500,
   },
 
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 0,
   },
 
   subItem: {
-    width: "47%",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#E8E8E8",
-    borderRadius: 16,
-    padding: 0,
-    height: "auto",
-    minHeight: 0,
+    width: "25%",
+    padding: 4,
+    alignItems: "center",
   },
 
   imageContainer: {
-    width: "100%",
-    height: 120,
+    backgroundColor: colors.white50,
+    borderColor: colors.gray200,
+    borderWidth: 1,
     borderRadius: 12,
-    backgroundColor: "#f0f0f0",
+    width: "100%",
     overflow: "hidden",
-    marginBottom: 8,
+    marginBottom: 2,
+    height: 80,
+    padding: 8,
   },
 
   image: {
     width: "100%",
     height: "100%",
+    borderRadius: 4,
   },
 
   subName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
-    color: "#333",
-    marginTop: 8,
-    paddingHorizontal: 4,
+    color: colors.black800,
+    marginTop: 2,
+    textAlign: "center",
   },
 });

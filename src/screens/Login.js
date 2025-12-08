@@ -30,11 +30,6 @@ export default function Login({ navigation }) {
       setError(error.message);
       return;
     }
-
-    if (data?.user) {
-      // On successful login, we replace the auth flow with the main app flow.
-      navigation.replace("UserDashboard");
-    }
   }
 
   return (
