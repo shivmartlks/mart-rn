@@ -2,6 +2,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import Toast from "react-native-toast-message";
 
 export default function App() {
   return (
@@ -9,6 +10,7 @@ export default function App() {
       <AuthProvider>
         <NavigationContainer>
           <RootNavigator />
+          <Toast />
         </NavigationContainer>
       </AuthProvider>
     </SafeAreaProvider>

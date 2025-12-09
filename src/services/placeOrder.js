@@ -1,69 +1,73 @@
-import { supabase } from "../services/supabase";
-
+import { supabase } from "./supabase";
 
 export async function placeOrder(user, addressId, paymentMode = "cod") {
-  // 1. Load chosen address
-  const { data: address } = await supabase
-  .from("addresses")
-  .select("address_line, phone, pincode, delivery_instructions, latitude, longitude")
-  .eq("id", addressId)
-  .single();
+  // 1️⃣ Load address
+  const { data: address, error: addrErr } = await supabase
+    .from("addresses")
+    .select(
+      "address_line, phone, pincode, delivery_instructions, latitude, longitude"
+    )
+    .eq("id", addressId)
+    .single();
 
-  if (!address) throw new Error("Address not found");
+  if (addrErr || !address) throw new Error("Address not found");
 
-  // 2. Load cart
-  const { data: cartItems } = await supabase
+  // 2️⃣ Load cart
+  const { data: cartItems, error: cartErr } = await supabase
     .from("cart_items")
     .select("product_id, quantity, products(name, price)")
     .eq("user_id", user.id);
 
-  if (!cartItems.length) throw new Error("Cart empty");
+  if (cartErr || !cartItems.length) throw new Error("Cart empty");
 
-  // 3. Total
+  // 3️⃣ Total
   const total = cartItems.reduce(
     (sum, i) => sum + i.quantity * i.products.price,
     0
   );
 
-  // 4. JSON backup
-  const jsonItems = cartItems.map(i => ({
+  // 4️⃣ JSON backup
+  const jsonItems = cartItems.map((i) => ({
     product_id: i.product_id,
     name: i.products.name,
     price: i.products.price,
-    quantity: i.quantity
+    quantity: i.quantity,
   }));
 
-  // 5. Insert order
-  const { data: order } = await supabase
-  .from("orders")
-  .insert({
-    user_id: user.id,
-    items: jsonItems,
-    total_amount: total,
-    address_line: address.address_line,
-    phone: address.phone,
-    pincode: address.pincode,
-    delivery_instructions: address.delivery_instructions,
-    latitude: address.latitude,
-    longitude: address.longitude,
-    payment_mode: paymentMode,
-    status: "pending"
-  })
-  .select()
-  .single();
+  // 5️⃣ Insert into orders
+  const { data: order, error: orderErr } = await supabase
+    .from("orders")
+    .insert({
+      user_id: user.id,
+      items: jsonItems,
+      total_amount: total,
+      address_line: address.address_line,
+      phone: address.phone,
+      pincode: address.pincode,
+      delivery_instructions: address.delivery_instructions,
+      latitude: address.latitude,
+      longitude: address.longitude,
+      payment_mode: paymentMode,
+      status: "pending",
+    })
+    .select()
+    .single();
 
+  if (orderErr) throw orderErr;
 
-  // 6. Insert order items
-  await supabase.from("order_items").insert(
-    cartItems.map(i => ({
+  // 6️⃣ Insert order_items
+  const { error: itemsErr } = await supabase.from("order_items").insert(
+    cartItems.map((i) => ({
       order_id: order.id,
       product_id: i.product_id,
       quantity: i.quantity,
-      price_each: i.products.price
+      price_each: i.products.price,
     }))
   );
 
-  // 7. Clear cart
+  if (itemsErr) throw itemsErr;
+
+  // 7️⃣ Clear cart
   await supabase.from("cart_items").delete().eq("user_id", user.id);
 
   return order.id;
