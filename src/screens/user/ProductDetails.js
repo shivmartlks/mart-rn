@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,13 @@ import {
   ScrollView,
   Pressable,
 } from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import { Feather } from "@expo/vector-icons";
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from "@react-navigation/native";
 import { addToCart, removeFromCart } from "../../services/cartService";
+import { supabase } from "../../services/supabase";
 import { colors } from "../../Theme/theme";
 import { useAuth } from "../../contexts/AuthContext";
 import { IMAGES } from "../../const/imageConst";
@@ -20,28 +24,65 @@ export default function ProductDetails() {
   const { user } = useAuth();
 
   const product = route.params?.product;
-  const [qty, setQty] = useState(route.params?.initialQty || 0);
+  const [qty, setQty] = useState(0); // NEW: starts at 0 always
 
+  // -----------------------------------------------------
+  // Load quantity from cart_items when screen opens
+  // -----------------------------------------------------
+  async function fetchQuantity() {
+    if (!user || !product?.id) return;
+
+    const { data } = await supabase
+      .from("cart_items")
+      .select("quantity")
+      .eq("user_id", user.id)
+      .eq("product_id", product.id)
+      .maybeSingle();
+
+    setQty(data?.quantity || 0);
+  }
+
+  // Load on first mount
+  useEffect(() => {
+    fetchQuantity();
+  }, [product, user]);
+
+  // Load every time screen appears again
+  useFocusEffect(
+    useCallback(() => {
+      fetchQuantity();
+    }, [product, user])
+  );
+
+  // -----------------------------------------------------
+  // Cart handlers
+  // -----------------------------------------------------
   const handleAdd = async () => {
     if (!user) return;
     await addToCart(product.id, user.id);
-    setQty(qty + 1);
+    fetchQuantity(); // refresh qty after update
   };
 
   const handleRemove = async () => {
     if (qty === 0) return;
     await removeFromCart(product.id, user.id);
-    setQty(qty - 1);
+    fetchQuantity(); // refresh qty after update
   };
+
+  // -----------------------------------------------------
+  // Render
+  // -----------------------------------------------------
+  const isValidImage =
+    product.image_url &&
+    typeof product.image_url === "string" &&
+    product.image_url.startsWith("http");
 
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        {/* Image */}
+        {/* Product Image */}
         <Image
-          source={
-            product.image_url ? { uri: product.image_url } : IMAGES.default
-          }
+          source={isValidImage ? { uri: product.image_url } : IMAGES.default}
           style={styles.productImage}
           resizeMode="contain"
         />
@@ -54,15 +95,25 @@ export default function ProductDetails() {
             <Text style={styles.short}>{product.short_desc}</Text>
           ) : null}
 
+          {/* Pricing */}
           <View style={styles.priceRow}>
             <Text style={styles.price}>₹{product.price}</Text>
-            <Text style={styles.mrp}>₹{product.mrp}</Text>
-            <Text style={styles.discount}>
-              {(((product.mrp - product.price) / product.mrp) * 100).toFixed(0)}
-              % OFF
-            </Text>
+
+            {product.mrp ? (
+              <>
+                <Text style={styles.mrp}>₹{product.mrp}</Text>
+                <Text style={styles.discount}>
+                  {(
+                    ((product.mrp - product.price) / product.mrp) *
+                    100
+                  ).toFixed(0)}
+                  % OFF
+                </Text>
+              </>
+            ) : null}
           </View>
 
+          {/* Description */}
           <Text style={styles.sectionTitle}>About this item</Text>
           <Text style={styles.description}>
             {product.description || "No description available."}
@@ -70,7 +121,9 @@ export default function ProductDetails() {
         </View>
       </ScrollView>
 
-      {/* Floating Add to Cart */}
+      {/* ===========================
+          FOOTER ADD / QTY BUTTON
+      ============================ */}
       {qty === 0 ? (
         <Pressable style={styles.addFooter} onPress={handleAdd}>
           <Text style={styles.addFooterText}>ADD TO CART</Text>
@@ -92,18 +145,17 @@ export default function ProductDetails() {
   );
 }
 
+// =====================================================
+// STYLES
+// =====================================================
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.white50 },
-
-  header: {
-    padding: 14,
-    paddingTop: 40,
-  },
 
   productImage: {
     width: "100%",
     height: 300,
     marginBottom: 16,
+    backgroundColor: colors.white50,
   },
 
   detailsBox: {

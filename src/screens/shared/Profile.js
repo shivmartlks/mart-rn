@@ -51,15 +51,22 @@ export default function Profile() {
     <ScrollView style={styles.container}>
       {/* Dropdown Menu */}
       <View style={styles.contentWrapper}>
+        {/* ✅ Wishlist Button Added Here */}
+        <Button variant="ghost" onPress={() => navigation.navigate("Wishlist")}>
+          Your Wishlist
+        </Button>
+
         <Button
           variant="ghost"
           onPress={() => navigation.navigate("EditProfile")}
         >
           Edit Profile
         </Button>
+
         <Button variant="ghost" onPress={() => navigation.navigate("Orders")}>
           Orders
         </Button>
+
         <Button variant="ghost" onPress={handleLogout}>
           Logout
         </Button>
