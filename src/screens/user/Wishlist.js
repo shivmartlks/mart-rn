@@ -12,7 +12,7 @@ import { supabase } from "../../services/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import { IMAGES } from "../../const/imageConst";
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 
 // =====================================================
 // MAIN WISHLIST SCREEN

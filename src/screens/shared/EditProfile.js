@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { getProfile, updateProfile } from "../../services/profileService";
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 
 export default function EditProfile() {
   const navigation = useNavigation();

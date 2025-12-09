@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, Alert } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 
 export default function ManageAddresses() {
   const navigation = useNavigation();

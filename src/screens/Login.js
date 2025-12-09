@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from "react-native";
 import { supabase } from "../services/supabase";
-import Button from "../components/Button/Button";
+import Button from "../components/ui/Button";
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState("");

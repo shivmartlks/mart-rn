@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { fetchCategories, fetchSubCategories } from "../../services/adminApi";
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 
 export default function SubCategories() {
   const [categories, setCategories] = useState([]);

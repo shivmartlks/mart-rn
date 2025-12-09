@@ -14,7 +14,7 @@ import {
 } from "@react-navigation/native";
 import { addToCart, removeFromCart } from "../../services/cartService";
 import { supabase } from "../../services/supabase";
-import { colors } from "../../Theme/theme";
+import { colors } from "../../theme/theme";
 import { useAuth } from "../../contexts/AuthContext";
 import { IMAGES } from "../../const/imageConst";
 

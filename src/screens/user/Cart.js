@@ -11,7 +11,7 @@ import {
 import { supabase } from "../../services/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 import { IMAGES } from "../../const/imageConst";
 import { addToCart, removeFromCart } from "../../services/cartService";
 import Toast from "react-native-toast-message";

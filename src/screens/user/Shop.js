@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
-import { colors, textSizes, radius } from "../../Theme/theme";
+import { colors, textSizes, radius } from "../../theme/theme";
 import { IMAGES } from "../../const/imageConst";
 
 export default function Shop() {

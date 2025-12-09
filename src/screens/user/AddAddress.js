@@ -11,7 +11,7 @@ import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { Picker } from "@react-native-picker/picker";
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 
 import { useAuth } from "../../contexts/AuthContext";
 

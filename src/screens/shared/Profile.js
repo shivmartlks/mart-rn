@@ -11,7 +11,7 @@ import {
 import { supabase } from "../../services/supabase";
 import { getProfile } from "../../services/profileService";
 import { useNavigation } from "@react-navigation/native";
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 
 export default function Profile() {
   const navigation = useNavigation();

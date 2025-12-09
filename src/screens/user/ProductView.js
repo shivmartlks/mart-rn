@@ -20,8 +20,8 @@ import {
 } from "../../services/cartService";
 import { IMAGES } from "../../const/imageConst";
 import { useAuth } from "../../contexts/AuthContext";
-import Button from "../../components/Button/Button";
-import { colors, textSizes, radius } from "../../Theme/theme";
+import Button from "../../components/ui/Button";
+import { colors, textSizes, radius } from "../../theme/theme";
 
 export default function ProductView() {
   const navigation = useNavigation();

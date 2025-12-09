@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 
 // Import your RN-converted admin screens
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 import CategoriesScreen from "./Categories";
 import SubCategoriesScreen from "./SubCategories";
 import GroupsScreen from "./Groups";

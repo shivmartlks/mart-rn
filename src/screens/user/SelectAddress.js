@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 
 export default function SelectAddress({ user, selectedAddress, onSelect }) {
   const [addresses, setAddresses] = useState([]);

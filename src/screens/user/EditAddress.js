@@ -12,7 +12,7 @@ import { Picker } from "@react-native-picker/picker";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
 
-import Button from "../../components/Button/Button";
+import Button from "../../components/ui/Button";
 export default function EditAddress() {
   const navigation = useNavigation();
   const route = useRoute();
