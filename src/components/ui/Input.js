@@ -14,23 +14,44 @@ export default function Input({
   label,
   error = "",
   helper = "",
+  size = "md", // NEW: sm | md | lg
   style = {},
   inputStyle = {},
   ...props
 }) {
   const [focused, setFocused] = useState(false);
 
-  // Base input token system
+  // Base tokens
   const tokens = componentTokens.input;
+
+  // NEW: dynamic size map
+  const sizeMap = {
+    sm: {
+      height: 36,
+      fontSize: textSizes.sm,
+      paddingVertical: spacing.xs,
+      radius: radius.sm,
+    },
+    md: {
+      height: 44,
+      fontSize: textSizes.md,
+      paddingVertical: spacing.xs,
+      radius: radius.md,
+    },
+    lg: {
+      height: 52,
+      fontSize: textSizes.lg,
+      paddingVertical: spacing.sm,
+      radius: radius.lg,
+    },
+  };
+
+  const s = sizeMap[size] ?? sizeMap.md;
 
   // Determine border color priority
   let borderColor = tokens.border;
-
-  if (error) {
-    borderColor = tokens.borderError;
-  } else if (focused) {
-    borderColor = tokens.borderFocused;
-  }
+  if (error) borderColor = tokens.borderError;
+  else if (focused) borderColor = tokens.borderFocused;
 
   return (
     <View style={style}>
@@ -39,7 +60,17 @@ export default function Input({
 
       {/* Input */}
       <TextInput
-        style={[styles.input, { borderColor }, inputStyle]}
+        style={[
+          styles.input,
+          {
+            height: s.height,
+            fontSize: s.fontSize,
+            paddingVertical: s.paddingVertical,
+            borderRadius: s.radius,
+            borderColor,
+          },
+          inputStyle,
+        ]}
         placeholderTextColor={tokens.placeholder}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
@@ -64,13 +95,9 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    height: 48,
     backgroundColor: componentTokens.input.bg,
     borderWidth: 1,
-    borderRadius: componentTokens.input.radius,
     paddingHorizontal: componentTokens.input.paddingHorizontal,
-    paddingVertical: componentTokens.input.paddingVertical,
-    fontSize: textSizes.md,
     color: componentTokens.input.text,
   },
 

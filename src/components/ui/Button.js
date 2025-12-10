@@ -8,11 +8,17 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { colors, spacing, textSizes, radius } from "../../theme";
+import {
+  colors,
+  spacing,
+  textSizes,
+  radius,
+  componentTokens,
+} from "../../theme";
 
 export default function Button({
-  title = null, // optional if using children
-  children = null, // supports custom JSX
+  title = null,
+  children = null,
   onPress,
   size = "md", // sm | md | lg
   variant = "primary", // primary | secondary | ghost | link
@@ -25,33 +31,37 @@ export default function Button({
   textStyle = {},
   ...props
 }) {
-  const isDisabled = disabled || loading;
+  const isDisabled = loading || disabled;
 
   // -----------------------------
-  // SIZE MAP
+  // SIZE MAP (with fallback!)
   // -----------------------------
   const sizeMap = {
     sm: {
-      height: 40,
+      height: 32,
       fontSize: textSizes.sm,
       paddingVertical: spacing.xs,
+      borderRadius: radius.sm,
     },
     md: {
-      height: 48,
+      height: 40,
       fontSize: textSizes.md,
-      paddingVertical: spacing.sm,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.md,
     },
     lg: {
-      height: 56,
+      height: 48,
       fontSize: textSizes.lg,
-      paddingVertical: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: radius.lg,
     },
   };
 
-  const s = sizeMap[size];
+  // SAFETY: guarantee 's' is never undefined
+  const s = sizeMap[size] || sizeMap["md"];
 
   // -----------------------------
-  // VARIANT MAP
+  // VARIANT MAP (with fallback!)
   // -----------------------------
   const variantMap = {
     primary: {
@@ -76,16 +86,16 @@ export default function Button({
     },
   };
 
-  const v = variantMap[variant];
+  const v = variantMap[variant] || variantMap["primary"];
 
   // -----------------------------
-  // DISABLED STATE
+  // DISABLED STYLES (theme tokens)
   // -----------------------------
   const disabledStyle = isDisabled
     ? {
-        backgroundColor: colors.gray200,
-        textColor: colors.textMuted,
-        borderColor: colors.gray200,
+        backgroundColor: componentTokens.button.disabledBg,
+        textColor: componentTokens.button.disabledText,
+        borderColor: componentTokens.button.disabledBg,
       }
     : {};
 
@@ -107,8 +117,14 @@ export default function Button({
           backgroundColor: bg,
           borderColor: border,
           borderWidth: border === "transparent" ? 0 : 1,
+
+          // SIZE VALUES (safe!)
           minHeight: s.height,
           paddingVertical: s.paddingVertical,
+
+          // BUTTON RADIUS SHOULD MATCH SIZE RADIUS
+          borderRadius: s.borderRadius,
+
           width: block ? "100%" : undefined,
         },
         style,
@@ -120,12 +136,15 @@ export default function Button({
         <View style={{ marginRight: spacing.xs }}>{leftIcon}</View>
       )}
 
-      {/* TITLE / CHILDREN */}
+      {/* LABEL OR CHILDREN */}
       {!loading && (
         <Text
           style={[
             styles.text,
-            { fontSize: s.fontSize, color: txtColor },
+            {
+              fontSize: s.fontSize,
+              color: txtColor,
+            },
             textStyle,
           ]}
         >
@@ -152,7 +171,6 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: radius.lg,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
