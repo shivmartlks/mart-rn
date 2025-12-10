@@ -2,14 +2,7 @@
 
 import React from "react";
 import { View, StyleSheet } from "react-native";
-import {
-  colors,
-  radius,
-  spacing,
-  shadows,
-  variants,
-  componentTokens,
-} from "../../theme";
+import { shadows, variants, componentTokens } from "../../theme";
 
 export default function Card({
   children,

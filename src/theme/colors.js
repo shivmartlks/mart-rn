@@ -108,5 +108,3 @@ export const colors = {
 
   shadowBase: "rgba(0,0,0,0.06)",
 };
-
-export default colors;

@@ -5,5 +5,3 @@ export const radius = {
   lg: 16,
   xl: 28,
 };
-
-export default radius;

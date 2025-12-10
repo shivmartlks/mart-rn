@@ -1,5 +1,5 @@
 // src/theme/shadows.js
-import colors from "./colors";
+import { colors } from "./colors";
 
 export const shadows = {
   card: {
@@ -15,5 +15,3 @@ export const shadows = {
     elevation: 2,
   },
 };
-
-export default shadows;

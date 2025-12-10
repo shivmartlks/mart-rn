@@ -9,5 +9,3 @@ export const textSizes = {
   "2xl": 24,
   "3xl": 30,
 };
-
-export default textSizes;

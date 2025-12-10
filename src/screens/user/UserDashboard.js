@@ -14,6 +14,8 @@ import Avatar from "../../components/ui/Avatar";
 import ImageCard from "../../components/ui/ImageCard";
 import SearchBar from "../../components/ui/SearchBar";
 import FormRow from "../../components/ui/FormRow";
+import { colors, spacing, textSizes } from "../../theme";
+import { Feather } from "@expo/vector-icons";
 
 export default function UserDashboard() {
   return (
@@ -21,9 +23,7 @@ export default function UserDashboard() {
       <Text style={styles.heading}>UI Component Showcase</Text>
 
       {/* Primary Button */}
-      <Button style={{ backgroundColor: "#2563EB", marginBottom: 12 }}>
-        Continue
-      </Button>
+      <Button title="Login" />
 
       {/* Blue tinted info box */}
       <View style={styles.infoBlue}>
@@ -96,13 +96,21 @@ export default function UserDashboard() {
         <Text>Deposit Confirmed</Text>
       </View>
 
-      <Card variant="default">...</Card>
-      <Card variant="muted">...</Card>
+      <Card variant="default">
+        <Text>djskjdk</Text>
+      </Card>
+      <Card variant="muted">
+        <Text>djskjdk</Text>
+      </Card>
       <Card variant="success">Deposit Completed</Card>
       <Card variant="danger">Payment Failed</Card>
       <Card variant="warning">Pending Confirmation</Card>
-      <Card style={{ marginBottom: 16 }}>...</Card>
-      <Card elevated={false}>...</Card>
+      <Card style={{ marginBottom: 16 }}>
+        <Text>djskjdk</Text>
+      </Card>
+      <Card elevated={false}>
+        <Text>djskjdk</Text>
+      </Card>
       <Card style={{ margin: spacing.lg }}>
         <Text style={{ fontSize: textSizes.lg, marginBottom: spacing.sm }}>
           Payment Status
@@ -129,7 +137,7 @@ export default function UserDashboard() {
       <Header
         title="Orders"
         right={
-          <Icon name="more-vertical" size={20} color={colors.textPrimary} />
+          <Feather name="more-vertical" size={20} color={colors.textPrimary} />
         }
       />
 
@@ -148,12 +156,6 @@ export default function UserDashboard() {
       </Card>
 
       <Divider inset={20} />
-
-      <View>
-        <ListItem />
-        <Divider />
-        <ListItem />
-      </View>
 
       <Divider
         thickness={2}
@@ -175,16 +177,15 @@ export default function UserDashboard() {
       />
       <View style={{ paddingHorizontal: spacing.lg }}>
         <SectionTitle title="Address" />
-        <Card>...</Card>
+        <Card>
+          <Text>djskjdk</Text>
+        </Card>
 
         <SectionTitle title="Payment Method" />
-        <Card>...</Card>
+        <Card>
+          <Text>djskjdk</Text>
+        </Card>
       </View>
-
-      <ListTile
-        title="Profile"
-        left={<IconUser size={22} color={colors.textPrimary} />}
-      />
 
       <ListTile title="UPI Payment" subtitle="Linked to your bank" />
 
@@ -198,23 +199,9 @@ export default function UserDashboard() {
         onPress={() => navigation.navigate("Orders")}
       />
 
-      <ListTile
-        title="Edit Profile"
-        left={<IconUser />}
-        showArrow
-        onPress={() => navigate("EditProfile")}
-      />
-
       <Divider inset={40} />
 
-      <ListTile title="Logout" left={<IconLogout />} onPress={logout} />
-
       <Badge label="Delivered" variant="success" />
-      <Badge
-        label="COD"
-        variant="neutral"
-        icon={<CashIcon size={14} color={colors.textPrimary} />}
-      />
 
       <Badge label="Pending" variant="warning" />
 
@@ -231,19 +218,19 @@ export default function UserDashboard() {
         <Badge label="Express Delivery" variant="info" />
       </Card>
 
-      <Modal visible={open} title="Added to Cart">
+      {/* <Modal visible={true} title="Added to Cart">
         <Text style={{ textAlign: "center", color: colors.textPrimary }}>
           Product added successfully!
         </Text>
-      </Modal>
+      </Modal> */}
 
-      <Modal visible={open} title="Add Address" showButtons={false}>
+      {/* <Modal visible={true} title="Add Address" showButtons={false}>
         <Input label="Name" />
         <Input label="Phone" style={{ marginTop: 12 }} />
         <Button block style={{ marginTop: 20 }}>
           Save
         </Button>
-      </Modal>
+      </Modal> */}
 
       <Chip label="Popular" />
       <Chip label="Newest" />
@@ -253,11 +240,6 @@ export default function UserDashboard() {
         label="Electronics"
         selected={true}
         onPress={() => setCategory("electronics")}
-      />
-
-      <Chip
-        label="Fast Delivery"
-        leftIcon={<FastIcon size={14} color={colors.textPrimary} />}
       />
 
       <Chip
@@ -273,14 +255,14 @@ export default function UserDashboard() {
         <Chip label="Accessories" />
       </View>
 
-      <Switch value={isEnabled} onChange={setIsEnabled} />
+      {/* <Switch value={isEnabled} onChange={setIsEnabled} />
 
-      <Switch size="sm" value={notifications} onChange={setNotifications} />
+      <Switch size="sm" value={notifications} onChange={setNotifications} /> */}
 
-      <ListTile
+      {/* <ListTile
         title="Notifications"
         right={<Switch value={enabled} onChange={setEnabled} />}
-      />
+      /> */}
       <Switch value={true} disabled />
 
       <Avatar name="John Doe" />
@@ -301,24 +283,26 @@ export default function UserDashboard() {
         onPress={() => navigation.navigate("ProductDetails")}
       />
 
-      <ImageCard
+      {/* <ImageCard
         title="Bluetooth Headphones"
         price={1299}
         image={product.image}
-      />
+      /> */}
 
       <ImageCard
         title="Organic Almonds"
         price={249}
-        image={url}
+        image={
+          "https://enjimxeifkptjueqapyz.supabase.co/storage/v1/object/public/shiv-mart/default.png"
+        }
         showAddButton
       />
 
-      <SearchBar
+      {/* <SearchBar
         value={search}
         onChangeText={setSearch}
         style={{ margin: spacing.md }}
-      />
+      /> */}
 
       <FormRow label="Full Name" required>
         <Input placeholder="Enter your name" />

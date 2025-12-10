@@ -1,9 +1,9 @@
 // src/theme/tokens.js
 
-import colors from "./colors";
-import radius from "./radius";
-import spacing from "./spacing";
-import textSizes from "./typography";
+import { colors } from "./colors";
+import { radius } from "./radius";
+import { spacing } from "./spacing";
+import { textSizes } from "./typography";
 
 export const componentTokens = {
   // ---------------- BUTTONS ----------------
@@ -62,5 +62,3 @@ export const componentTokens = {
     padding: spacing.xxl,
   },
 };
-
-export default componentTokens;

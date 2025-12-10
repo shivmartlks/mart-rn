@@ -1,6 +1,6 @@
 // src/theme/variants.js
 
-import colors from "./colors";
+import { colors } from "./colors";
 
 export const variants = {
   card: {
@@ -22,5 +22,3 @@ export const variants = {
     },
   },
 };
-
-export default variants;

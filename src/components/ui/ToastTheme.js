@@ -1,7 +1,7 @@
 // src/theme/ToastTheme.js
 
 import { StyleSheet, View, Text } from "react-native";
-import { colors, radius, spacing, textSizes } from "../../theme/index";
+import { colors, radius, spacing, textSizes } from "../../theme";
 
 export const toastConfig = {
   success: ({ text1, text2 }) => (
