@@ -46,6 +46,7 @@ function resolve(tokenOrHex, fallback) {
   return tokenOrHex;
 }
 
+// Removed toast logic and ensured `disableIncrease` is respected
 export default function QuantitySelector({
   value = 0,
   onIncrease = () => {},
@@ -56,6 +57,7 @@ export default function QuantitySelector({
   style = {},
   addLabel = "Add",
   disabled = false,
+  disableIncrease = false, // Added prop to disable the + button
   borderColor: borderColorProp = null,
   bg: bgProp = null,
   iconColor: iconColorProp = null,
@@ -202,7 +204,7 @@ export default function QuantitySelector({
 
         <TouchableOpacity
           onPress={onIncrease}
-          disabled={disabled}
+          disabled={disableIncrease || disabled} // Disable + button if `disableIncrease` is true
           activeOpacity={0.7}
           style={{
             flex: 1,

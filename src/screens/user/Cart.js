@@ -60,7 +60,7 @@ export default function Cart() {
         product_id,
         quantity,
         products (
-          id, name, price, mrp, image_url, short_desc, description
+          id, name, price, mrp, image_url, short_desc, description, stock_value
         )
       `
       )
@@ -325,6 +325,7 @@ export default function Cart() {
                     await removeFromCart(i.product_id, user.id);
                     loadCart();
                   }}
+                  disableIncrease={i.quantity >= p.stock_value} // Disable + button if stock is exceeded
                   style={{ marginTop: spacing.sm }}
                 />
 

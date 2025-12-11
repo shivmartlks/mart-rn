@@ -21,7 +21,7 @@ export default function ProductDetails() {
     if (!user || !product?.id) return;
     const { data } = await supabase
       .from("cart_items")
-      .select("quantity")
+      .select("quantity, products(stock_value)")
       .eq("user_id", user.id)
       .eq("product_id", product.id)
       .maybeSingle();
@@ -90,6 +90,7 @@ export default function ProductDetails() {
             addLabel="Add to Cart"
             onIncrease={handleAdd}
             onDecrease={handleRemove}
+            disableIncrease={qty >= product.stock_value} // Disable + button if stock is exceeded
             style={{ alignSelf: "center", width: 120 }}
           />
         </View>
