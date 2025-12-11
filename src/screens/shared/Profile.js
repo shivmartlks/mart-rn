@@ -60,7 +60,7 @@ export default function Profile() {
     <ScrollView
       style={{
         flex: 1,
-        backgroundColor: colors.background,
+        backgroundColor: colors.screenBG,
       }}
       contentContainerStyle={{
         padding: spacing.lg,

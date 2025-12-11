@@ -5,11 +5,11 @@
 // -----------------------------------------------------------------------------
 
 export const colors = {
-  // WHITE
-  white50: "#ffffff",
-  white100: "#fafbff",
-  white150: "#f7f8fa",
-  white200: "#f1f2f5",
+  // WHITE (updated to match new screenBG + cardBG hierarchy)
+  white50: "#ffffff", // pure bright white → used for cardBG
+  white100: "#fdfdfd", // ultra-soft off-white
+  white150: "#fafafa", // matches screenBG softness
+  white200: "#f1f2f5", // deeper neutral white for subtle surfaces
 
   // BLACK (Neutral Dark Grays)
   black50: "#f5f5f5",
@@ -26,7 +26,7 @@ export const colors = {
   // GRAY (UI grayscale system)
   gray50: "#f7f8fa",
   gray100: "#f1f2f4",
-  gray200: "#e8e9ec",
+  gray200: "#e8e9ec", // border color
   gray300: "#d4d6da",
   gray400: "#b7bcc5",
   gray500: "#9ea4af",
@@ -96,15 +96,19 @@ export const colors = {
   warning: "#ff9d27",
   danger: "#e73434",
 
-  screenBG: "#f7f8fa",
-  cardBG: "#ffffff",
+  // FINAL APP SURFACE COLORS (your chosen ones)
+  screenBG: "#fafafa", // soft neutral screen background
+  cardBG: "#ffffff", // cards must remain brighter than background
 
+  // TEXT
   textPrimary: "#1b1d28",
   textSecondary: "#6a6f7d",
   textMuted: "#9ea4af",
 
+  // UI LINES
   border: "#e8e9ec",
   divider: "#f1f2f4",
 
+  // SHADOW
   shadowBase: "rgba(0,0,0,0.06)",
 };

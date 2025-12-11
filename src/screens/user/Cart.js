@@ -7,12 +7,15 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
+  ActivityIndicator,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
 import QuantitySelector from "../../components/ui/QuantitySelector";
+import RadioGroup from "../../components/ui/RadioGroup";
+import Card from "../../components/ui/Card";
 import { IMAGES } from "../../const/imageConst";
 import { addToCart, removeFromCart } from "../../services/cartService";
 import Toast from "react-native-toast-message";
@@ -28,6 +31,9 @@ export default function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Payment method state (wired to RadioGroup)
+  const [paymentMethod, setPaymentMethod] = useState("cod");
 
   useEffect(() => {
     if (user) {
@@ -97,18 +103,43 @@ export default function Cart() {
   // -----------------------------
   // EMPTY CART UI
   // -----------------------------
-  if (!loading && cartItems.length === 0)
+  if (loading)
     return (
       <View
-        style={[styles.emptyContainer, { backgroundColor: colors.background }]}
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          paddingTop: spacing.xl,
+          backgroundColor: colors.screenBG,
+        }}
       >
-        <Text style={[styles.emptyText, { color: colors.textPrimary }]}>
-          Your cart is empty.
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: spacing.sm, color: colors.textMuted }}>
+          Loading cart...
         </Text>
-        <Button onPress={() => navigation.navigate("Shop")}>
-          Browse Products
-        </Button>
       </View>
+    );
+
+  if (!loading && cartItems.length === 0)
+    return (
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.screenBG }}
+        contentContainerStyle={{ padding: spacing.lg }}
+      >
+        <Card elevated style={{ padding: spacing.lg, alignItems: "center" }}>
+          <Text style={{ fontSize: textSizes.lg, color: colors.textPrimary }}>
+            Your cart is empty.
+          </Text>
+
+          <Button
+            style={{ marginTop: spacing.md }}
+            onPress={() => navigation.navigate("Shop")}
+          >
+            Browse Products
+          </Button>
+        </Card>
+      </ScrollView>
     );
 
   // -----------------------------
@@ -140,7 +171,18 @@ export default function Cart() {
         return;
       }
 
-      const orderId = await placeOrder(user, defaultAddress.id, "cod");
+      // If somehow user managed to select an unavailable payment method,
+      // guard against it here.
+      if (paymentMethod === "online") {
+        Toast.show({
+          type: "error",
+          text1: "Payment Unavailable",
+          text2: "Online payment is currently unavailable. Please choose COD.",
+        });
+        return;
+      }
+
+      const orderId = await placeOrder(user, defaultAddress.id, paymentMethod);
 
       Toast.show({
         type: "success",
@@ -163,187 +205,208 @@ export default function Cart() {
   // -----------------------------
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      style={[styles.container, { backgroundColor: colors.screenBG }]}
+      contentContainerStyle={{ padding: spacing.lg }}
     >
-      {/* ADDRESS SECTION */}
+      {/* CARD 1: ADDRESS */}
       <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
         Delivery Address
       </Text>
-
-      {!defaultAddress ? (
-        <Button onPress={() => navigation.navigate("AddAddress")}>
-          + Add Address
-        </Button>
-      ) : (
-        <View
-          style={[
-            styles.addressBox,
-            { backgroundColor: colors.cardSoft, borderColor: colors.border },
-          ]}
-        >
-          <Text style={[styles.addressLabel, { color: colors.textPrimary }]}>
-            {defaultAddress.label}
-          </Text>
-          <Text style={[styles.addressLine, { color: colors.textSecondary }]}>
-            {defaultAddress.address_line}
-          </Text>
-          <Text style={[styles.phone, { color: colors.textSecondary }]}>
-            📞 {defaultAddress.phone}
-          </Text>
-
-          <Button
-            variant="secondary"
-            onPress={() => navigation.navigate("ManageAddresses")}
-            style={{ marginTop: spacing.sm }}
-          >
-            Change Address
+      <Card
+        style={{
+          marginBottom: spacing.lg,
+          backgroundColor: colors.cardBG,
+          borderColor: colors.border,
+        }}
+      >
+        {!defaultAddress ? (
+          <Button onPress={() => navigation.navigate("AddAddress")}>
+            + Add Address
           </Button>
-        </View>
-      )}
+        ) : (
+          <View>
+            <Text style={[styles.addressLabel, { color: colors.textPrimary }]}>
+              {defaultAddress.label}
+            </Text>
+            <Text style={[styles.addressLine, { color: colors.textSecondary }]}>
+              {defaultAddress.address_line}
+            </Text>
+            <Text style={[styles.phone, { color: colors.textSecondary }]}>
+              📞 {defaultAddress.phone}
+            </Text>
 
-      {/* CART ITEMS */}
+            <Button
+              variant="secondary"
+              onPress={() => navigation.navigate("ManageAddresses")}
+              style={{ marginTop: spacing.sm }}
+            >
+              Change Address
+            </Button>
+          </View>
+        )}
+      </Card>
+
+      {/* CARD 2: YOUR ITEMS */}
       <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
         Your Items
       </Text>
+      <Card
+        style={{
+          marginBottom: spacing.lg,
+          backgroundColor: colors.cardBG,
+          borderColor: colors.border,
+        }}
+      >
+        {cartItems.map((i) => {
+          const p = i.products;
+          const mrp = p.mrp || p.price;
+          const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
+          const isValidImage = p.image_url?.startsWith("http");
 
-      {cartItems.map((i) => {
-        const p = i.products;
-        const mrp = p.mrp || p.price;
-        const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
-        const isValidImage = p.image_url?.startsWith("http");
-
-        return (
-          <View
-            key={i.id}
-            style={[
-              styles.cartItem,
-              { backgroundColor: colors.cardSoft, borderColor: colors.border },
-            ]}
-          >
-            {/* Image */}
-            <Pressable
-              onPress={() =>
-                navigation.navigate("ProductDetails", { product: p })
-              }
+          return (
+            <View
+              key={i.id}
+              style={[
+                styles.cartItem,
+                { backgroundColor: "transparent", borderColor: "transparent" },
+              ]}
             >
-              <Image
-                source={isValidImage ? { uri: p.image_url } : IMAGES.default}
-                style={styles.cartImage}
-              />
-            </Pressable>
-
-            {/* ITEM INFO */}
-            <View style={{ flex: 1 }}>
-              <Text
-                style={[styles.itemName, { color: colors.textPrimary }]}
-                numberOfLines={2}
+              {/* Image */}
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("ProductDetails", { product: p })
+                }
               >
-                {p.name}
-              </Text>
+                <Image
+                  source={isValidImage ? { uri: p.image_url } : IMAGES.default}
+                  style={styles.cartImage}
+                />
+              </Pressable>
 
-              <View style={styles.priceRow}>
+              {/* ITEM INFO */}
+              <View style={{ flex: 1 }}>
                 <Text
-                  style={[
-                    styles.itemPriceDiscount,
-                    { color: colors.textPrimary },
-                  ]}
+                  style={[styles.itemName, { color: colors.textPrimary }]}
+                  numberOfLines={2}
                 >
-                  ₹{p.price}
+                  {p.name}
                 </Text>
-                <Text style={[styles.itemMRP, { color: colors.textSecondary }]}>
-                  ₹{mrp}
-                </Text>
-                <Text style={[styles.itemOff, { color: colors.success }]}>
-                  {discount}% OFF
-                </Text>
+
+                <View style={styles.priceRow}>
+                  <Text
+                    style={[
+                      styles.itemPriceDiscount,
+                      { color: colors.textPrimary },
+                    ]}
+                  >
+                    ₹{p.price}
+                  </Text>
+                  <Text
+                    style={[styles.itemMRP, { color: colors.textSecondary }]}
+                  >
+                    ₹{mrp}
+                  </Text>
+                  <Text style={[styles.itemOff, { color: colors.success }]}>
+                    {discount}% OFF
+                  </Text>
+                </View>
+
+                {/* Quantity Using NEW COMPONENT */}
+                <QuantitySelector
+                  value={i.quantity}
+                  variant="default"
+                  mode="filled"
+                  size="sm"
+                  onIncrease={async () => {
+                    await addToCart(i.product_id, user.id);
+                    loadCart();
+                  }}
+                  onDecrease={async () => {
+                    await removeFromCart(i.product_id, user.id);
+                    loadCart();
+                  }}
+                  style={{ marginTop: spacing.sm }}
+                />
+
+                {/* Move to wishlist */}
+                <Pressable
+                  onPress={async () => {
+                    await supabase.from("wishlist").insert({
+                      user_id: user.id,
+                      product_id: i.product_id,
+                    });
+                    await supabase
+                      .from("cart_items")
+                      .delete()
+                      .eq("user_id", user.id)
+                      .eq("product_id", i.product_id);
+                    loadCart();
+                  }}
+                >
+                  <Text
+                    style={[styles.wishlistText, { color: colors.primary }]}
+                  >
+                    ❤️ Move to Wishlist
+                  </Text>
+                </Pressable>
               </View>
 
-              {/* Quantity Using NEW COMPONENT */}
-              <QuantitySelector
-                value={i.quantity}
-                variant="default"
-                mode="filled"
-                size="sm"
-                onIncrease={async () => {
-                  await addToCart(i.product_id, user.id);
-                  loadCart();
-                }}
-                onDecrease={async () => {
-                  await removeFromCart(i.product_id, user.id);
-                  loadCart();
-                }}
-                style={{ marginTop: spacing.sm }}
-              />
-
-              {/* Move to wishlist */}
-              <Pressable
-                onPress={async () => {
-                  await supabase.from("wishlist").insert({
-                    user_id: user.id,
-                    product_id: i.product_id,
-                  });
-                  await supabase
-                    .from("cart_items")
-                    .delete()
-                    .eq("user_id", user.id)
-                    .eq("product_id", i.product_id);
-                  loadCart();
-                }}
-              >
-                <Text style={[styles.wishlistText, { color: colors.primary }]}>
-                  ❤️ Move to Wishlist
-                </Text>
-              </Pressable>
+              {/* Total Amount */}
+              <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>
+                ₹{(i.quantity * p.price).toFixed(2)}
+              </Text>
             </View>
+          );
+        })}
+      </Card>
 
-            {/* Total Amount */}
-            <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>
-              ₹{(i.quantity * p.price).toFixed(2)}
-            </Text>
-          </View>
-        );
-      })}
-
-      {/* PAYMENT OPTIONS */}
+      {/* CARD 3: PAYMENT OPTIONS */}
       <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
         Payment Options
       </Text>
-
-      <View
-        style={[
-          styles.paymentBox,
-          { backgroundColor: colors.cardSoft, borderColor: colors.border },
-        ]}
+      <Card
+        style={{
+          marginBottom: spacing.lg,
+          backgroundColor: colors.cardBG,
+          borderColor: colors.border,
+        }}
       >
-        <View style={styles.paymentRow}>
-          <Text style={[styles.paymentLabel, { color: colors.textPrimary }]}>
-            Cash on Delivery (COD)
-          </Text>
-          <Text style={[styles.paymentSelected, { color: colors.success }]}>
-            ✔
-          </Text>
-        </View>
+        <RadioGroup
+          value={paymentMethod}
+          onChange={(val) => setPaymentMethod(val)}
+          options={[
+            { value: "cod", label: "Cash on Delivery (COD)", disabled: false },
+            {
+              value: "online",
+              label: "Online Payment",
+              disabled: true,
+              note: "Unavailable",
+            },
+          ]}
+          direction="column"
+          size="md"
+        />
 
-        <View style={[styles.paymentRow, { opacity: 0.4 }]}>
-          <Text style={[styles.paymentLabel, { color: colors.textPrimary }]}>
-            Online Payment
-          </Text>
-          <Text style={[styles.paymentDisabled, { color: colors.textMuted }]}>
-            Unavailable
-          </Text>
-        </View>
-
-        <Text style={[styles.payNote, { color: colors.textSecondary }]}>
+        <Text
+          style={[
+            styles.payNote,
+            { color: colors.textSecondary, marginTop: spacing.sm },
+          ]}
+        >
           Online payment is currently unavailable.
         </Text>
-      </View>
+      </Card>
 
-      {/* BILLING */}
-      <View
-        style={[
-          styles.billBox,
-          { backgroundColor: colors.cardSoft, borderColor: colors.border },
-        ]}
+      {/* CARD 4: BILL DETAILS */}
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+        Bill Details
+      </Text>
+      <Card
+        style={{
+          marginBottom: spacing.lg,
+          backgroundColor: colors.cardBG,
+          borderColor: colors.border,
+        }}
       >
         <Text style={[styles.billTitle, { color: colors.textPrimary }]}>
           Bill Details
@@ -358,7 +421,7 @@ export default function Cart() {
         <BillRow label="Delivery Charge" value="₹0" />
         <BillRow label="Handling Charge" value="₹0" />
         <BillRow label="Grand Total" value={`₹${grandTotal}`} bold />
-      </View>
+      </Card>
 
       {/* PLACE ORDER */}
       <Button block onPress={handleOrder} style={{ marginTop: spacing.sm }}>
@@ -401,7 +464,7 @@ function BillRow({ label, value, highlight, bold }) {
 // STYLES
 // =====================================================
 const styles = StyleSheet.create({
-  container: { padding: spacing.lg, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: colors.screenBG },
 
   sectionTitle: {
     fontSize: textSizes.lg,
@@ -421,11 +484,13 @@ const styles = StyleSheet.create({
 
   cartItem: {
     flexDirection: "row",
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderRadius: radii.md,
-    borderWidth: 1,
+    borderWidth: 0,
     marginBottom: spacing.md,
     alignItems: "center",
+    backgroundColor: "transparent",
   },
 
   cartImage: {
