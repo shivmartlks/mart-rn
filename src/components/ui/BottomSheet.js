@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Text,
 } from "react-native";
-import { colors, spacing, radius, componentTokens, shadows } from "../../theme";
+import { colors, spacing, radii, componentTokens, shadows } from "../../theme";
 
 export default function BottomSheet({
   visible,
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 5,
     backgroundColor: colors.gray200,
-    borderRadius: radius.sm,
+    borderRadius: radii.sm,
     alignSelf: "center",
     marginBottom: spacing.md,
   },

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { colors, textSizes, spacing, radius } from "../../theme";
+import { colors, textSizes, spacing, radii } from "../../theme";
 
 export default function Chip({
   label,
@@ -48,7 +48,7 @@ export default function Chip({
           borderColor: borderColor,
           paddingVertical: s.paddingVertical,
           paddingHorizontal: s.paddingHorizontal,
-          borderRadius: radius.lg,
+          borderRadius: radii.lg,
           height: s.height,
         },
         style,

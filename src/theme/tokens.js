@@ -1,7 +1,7 @@
 // src/theme/tokens.js
 
 import { colors } from "./colors";
-import { radius } from "./radius";
+import { radii } from "./radius";
 import { spacing } from "./spacing";
 import { textSizes } from "./typography";
 
@@ -10,7 +10,7 @@ export const componentTokens = {
   button: {
     heightMd: 48,
     heightLg: 52,
-    radius: radius.lg,
+    radius: radii.lg,
 
     primaryBg: colors.primary,
     primaryText: colors.white50,
@@ -33,7 +33,7 @@ export const componentTokens = {
     text: colors.textPrimary,
     label: colors.textSecondary,
 
-    radius: radius.md,
+    radius: radii.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
@@ -42,7 +42,7 @@ export const componentTokens = {
   card: {
     bg: colors.white50,
     border: colors.gray200,
-    radius: radius.lg,
+    radius: radii.lg,
     padding: spacing.lg,
   },
 
@@ -58,7 +58,7 @@ export const componentTokens = {
   // ---------------- SHEET ----------------
   sheet: {
     bg: colors.cardBG,
-    radiusTop: radius.xl,
+    radiusTop: radii.xl,
     padding: spacing.xxl,
   },
 };

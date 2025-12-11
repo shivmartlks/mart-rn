@@ -1,3 +1,4 @@
+// src/screens/Cart.js
 import { useEffect, useState, useCallback } from "react";
 import {
   View,
@@ -5,21 +6,21 @@ import {
   Image,
   ScrollView,
   StyleSheet,
-  TouchableOpacity,
   Pressable,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
+import QuantitySelector from "../../components/ui/QuantitySelector";
 import { IMAGES } from "../../const/imageConst";
 import { addToCart, removeFromCart } from "../../services/cartService";
 import Toast from "react-native-toast-message";
 import { placeOrder } from "../../services/placeOrder";
 
-// =====================================================
-// MAIN CART SCREEN
-// =====================================================
+// Theme tokens (use your theme module)
+import { colors, spacing, textSizes, fontWeights, radii } from "../../theme";
+
 export default function Cart() {
   const navigation = useNavigation();
   const { user } = useAuth();
@@ -28,12 +29,6 @@ export default function Cart() {
   const [defaultAddress, setDefaultAddress] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Payment: always COD
-  const [payment, setPayment] = useState("cod");
-
-  // ----------------------------------------------------
-  // Load cart + address
-  // ----------------------------------------------------
   useEffect(() => {
     if (user) {
       loadCart();
@@ -47,7 +42,9 @@ export default function Cart() {
     }, [user])
   );
 
-  // Fetch cart
+  // -----------------------------
+  // Load Cart
+  // -----------------------------
   async function loadCart() {
     const { data } = await supabase
       .from("cart_items")
@@ -67,7 +64,9 @@ export default function Cart() {
     setLoading(false);
   }
 
-  // Fetch default address
+  // -----------------------------
+  // Load Default Address
+  // -----------------------------
   async function loadDefaultAddress() {
     const { data } = await supabase
       .from("addresses")
@@ -79,9 +78,9 @@ export default function Cart() {
     setDefaultAddress(data?.[0] || null);
   }
 
-  // -------------------------------
+  // -----------------------------
   // Billing Calculations
-  // -------------------------------
+  // -----------------------------
   const calculateMRP = () =>
     cartItems.reduce(
       (sum, i) => sum + i.quantity * (i.products.mrp || i.products.price),
@@ -95,22 +94,26 @@ export default function Cart() {
 
   const grandTotal = calculateTotal();
 
-  // -------------------------------
-  // EMPTY CART
-  // -------------------------------
+  // -----------------------------
+  // EMPTY CART UI
+  // -----------------------------
   if (!loading && cartItems.length === 0)
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Your cart is empty.</Text>
+      <View
+        style={[styles.emptyContainer, { backgroundColor: colors.background }]}
+      >
+        <Text style={[styles.emptyText, { color: colors.textPrimary }]}>
+          Your cart is empty.
+        </Text>
         <Button onPress={() => navigation.navigate("Shop")}>
           Browse Products
         </Button>
       </View>
     );
 
-  // -------------------------------
-  // ORDER PLACEMENT FUNCTION
-  // -------------------------------
+  // -----------------------------
+  // Place Order
+  // -----------------------------
   async function handleOrder() {
     try {
       if (!defaultAddress) {
@@ -122,7 +125,6 @@ export default function Cart() {
         return;
       }
 
-      // 1️⃣ Check serviceability
       const { data: pin } = await supabase
         .from("serviceable_pincodes")
         .select("*")
@@ -133,16 +135,12 @@ export default function Cart() {
         Toast.show({
           type: "error",
           text1: "Not Deliverable",
-          text2: "We cannot deliver to this pincode.",
+          text2: "This area is not serviceable.",
         });
         return;
       }
 
-      // 2️⃣ COD is only allowed
-      const paymentMode = "cod";
-
-      // 3️⃣ Place order using shared API
-      const orderId = await placeOrder(user, defaultAddress.id, paymentMode);
+      const orderId = await placeOrder(user, defaultAddress.id, "cod");
 
       Toast.show({
         type: "success",
@@ -150,11 +148,8 @@ export default function Cart() {
         text2: `Order ID: ${orderId}`,
       });
 
-      setTimeout(() => {
-        navigation.navigate("Orders");
-      }, 700);
+      setTimeout(() => navigation.navigate("Orders"), 700);
     } catch (error) {
-      console.error(error);
       Toast.show({
         type: "error",
         text1: "Order Failed",
@@ -163,27 +158,43 @@ export default function Cart() {
     }
   }
 
-  // -------------------------------
+  // -----------------------------
   // MAIN UI
-  // -------------------------------
+  // -----------------------------
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* ADDRESS SECTION */}
-      <Text style={styles.sectionTitle}>Delivery Address</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+        Delivery Address
+      </Text>
 
       {!defaultAddress ? (
         <Button onPress={() => navigation.navigate("AddAddress")}>
           + Add Address
         </Button>
       ) : (
-        <View style={styles.addressBox}>
-          <Text style={styles.addressLabel}>{defaultAddress.label}</Text>
-          <Text style={styles.addressLine}>{defaultAddress.address_line}</Text>
-          <Text style={styles.phone}>📞 {defaultAddress.phone}</Text>
+        <View
+          style={[
+            styles.addressBox,
+            { backgroundColor: colors.cardSoft, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.addressLabel, { color: colors.textPrimary }]}>
+            {defaultAddress.label}
+          </Text>
+          <Text style={[styles.addressLine, { color: colors.textSecondary }]}>
+            {defaultAddress.address_line}
+          </Text>
+          <Text style={[styles.phone, { color: colors.textSecondary }]}>
+            📞 {defaultAddress.phone}
+          </Text>
 
           <Button
             variant="secondary"
             onPress={() => navigation.navigate("ManageAddresses")}
+            style={{ marginTop: spacing.sm }}
           >
             Change Address
           </Button>
@@ -191,63 +202,81 @@ export default function Cart() {
       )}
 
       {/* CART ITEMS */}
-      <Text style={styles.sectionTitle}>Your Items</Text>
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+        Your Items
+      </Text>
 
       {cartItems.map((i) => {
         const p = i.products;
         const mrp = p.mrp || p.price;
-        const discount = Math.round(((mrp - p.price) / mrp) * 100);
+        const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
         const isValidImage = p.image_url?.startsWith("http");
 
         return (
-          <Pressable
+          <View
             key={i.id}
-            style={styles.cartItem}
-            onPress={() =>
-              navigation.navigate("ProductDetails", { product: p })
-            }
+            style={[
+              styles.cartItem,
+              { backgroundColor: colors.cardSoft, borderColor: colors.border },
+            ]}
           >
-            <Image
-              source={isValidImage ? { uri: p.image_url } : IMAGES.default}
-              style={styles.cartImage}
-            />
+            {/* Image */}
+            <Pressable
+              onPress={() =>
+                navigation.navigate("ProductDetails", { product: p })
+              }
+            >
+              <Image
+                source={isValidImage ? { uri: p.image_url } : IMAGES.default}
+                style={styles.cartImage}
+              />
+            </Pressable>
 
+            {/* ITEM INFO */}
             <View style={{ flex: 1 }}>
-              <Text style={styles.itemName}>{p.name}</Text>
+              <Text
+                style={[styles.itemName, { color: colors.textPrimary }]}
+                numberOfLines={2}
+              >
+                {p.name}
+              </Text>
 
               <View style={styles.priceRow}>
-                <Text style={styles.itemPriceDiscount}>₹{p.price}</Text>
-                <Text style={styles.itemMRP}>₹{mrp}</Text>
-                <Text style={styles.itemOff}>{discount}% OFF</Text>
+                <Text
+                  style={[
+                    styles.itemPriceDiscount,
+                    { color: colors.textPrimary },
+                  ]}
+                >
+                  ₹{p.price}
+                </Text>
+                <Text style={[styles.itemMRP, { color: colors.textSecondary }]}>
+                  ₹{mrp}
+                </Text>
+                <Text style={[styles.itemOff, { color: colors.success }]}>
+                  {discount}% OFF
+                </Text>
               </View>
 
-              {/* Quantity Controls */}
-              <View style={styles.qtyRow}>
-                <TouchableOpacity
-                  style={styles.qtyBtn}
-                  onPress={async () => {
-                    await removeFromCart(i.product_id, user.id);
-                    loadCart();
-                  }}
-                >
-                  <Text style={styles.qtyBtnText}>−</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.qtyText}>{i.quantity}</Text>
-
-                <TouchableOpacity
-                  style={styles.qtyBtn}
-                  onPress={async () => {
-                    await addToCart(i.product_id, user.id);
-                    loadCart();
-                  }}
-                >
-                  <Text style={styles.qtyBtnText}>+</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Quantity Using NEW COMPONENT */}
+              <QuantitySelector
+                value={i.quantity}
+                variant="default"
+                mode="filled"
+                size="sm"
+                onIncrease={async () => {
+                  await addToCart(i.product_id, user.id);
+                  loadCart();
+                }}
+                onDecrease={async () => {
+                  await removeFromCart(i.product_id, user.id);
+                  loadCart();
+                }}
+                style={{ marginTop: spacing.sm }}
+              />
 
               {/* Move to wishlist */}
-              <TouchableOpacity
+              <Pressable
                 onPress={async () => {
                   await supabase.from("wishlist").insert({
                     user_id: user.id,
@@ -261,38 +290,65 @@ export default function Cart() {
                   loadCart();
                 }}
               >
-                <Text style={styles.wishlistText}>❤️ Move to Wishlist</Text>
-              </TouchableOpacity>
+                <Text style={[styles.wishlistText, { color: colors.primary }]}>
+                  ❤️ Move to Wishlist
+                </Text>
+              </Pressable>
             </View>
 
-            <Text style={styles.itemTotal}>
+            {/* Total Amount */}
+            <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>
               ₹{(i.quantity * p.price).toFixed(2)}
             </Text>
-          </Pressable>
+          </View>
         );
       })}
 
-      {/* PAYMENT MODE */}
-      <Text style={styles.sectionTitle}>Payment Options</Text>
-      <View style={styles.paymentBox}>
+      {/* PAYMENT OPTIONS */}
+      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+        Payment Options
+      </Text>
+
+      <View
+        style={[
+          styles.paymentBox,
+          { backgroundColor: colors.cardSoft, borderColor: colors.border },
+        ]}
+      >
         <View style={styles.paymentRow}>
-          <Text style={styles.paymentLabel}>Cash on Delivery (COD)</Text>
-          <Text style={styles.paymentSelected}>✔</Text>
+          <Text style={[styles.paymentLabel, { color: colors.textPrimary }]}>
+            Cash on Delivery (COD)
+          </Text>
+          <Text style={[styles.paymentSelected, { color: colors.success }]}>
+            ✔
+          </Text>
         </View>
 
         <View style={[styles.paymentRow, { opacity: 0.4 }]}>
-          <Text style={styles.paymentLabel}>Online Payment</Text>
-          <Text style={styles.paymentDisabled}>Unavailable</Text>
+          <Text style={[styles.paymentLabel, { color: colors.textPrimary }]}>
+            Online Payment
+          </Text>
+          <Text style={[styles.paymentDisabled, { color: colors.textMuted }]}>
+            Unavailable
+          </Text>
         </View>
 
-        <Text style={styles.payNote}>
-          Online payment is currently unavailable. COD will be used.
+        <Text style={[styles.payNote, { color: colors.textSecondary }]}>
+          Online payment is currently unavailable.
         </Text>
       </View>
 
       {/* BILLING */}
-      <View style={styles.billBox}>
-        <Text style={styles.billTitle}>Bill Details</Text>
+      <View
+        style={[
+          styles.billBox,
+          { backgroundColor: colors.cardSoft, borderColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.billTitle, { color: colors.textPrimary }]}>
+          Bill Details
+        </Text>
+
         <BillRow label="Total MRP" value={`₹${calculateMRP()}`} />
         <BillRow
           label="You Saved"
@@ -304,30 +360,35 @@ export default function Cart() {
         <BillRow label="Grand Total" value={`₹${grandTotal}`} bold />
       </View>
 
-      {/* ORDER BUTTON */}
-      <Button block onPress={handleOrder}>
+      {/* PLACE ORDER */}
+      <Button block onPress={handleOrder} style={{ marginTop: spacing.sm }}>
         Place Order
       </Button>
 
-      <View style={{ height: 50 }} />
+      <View style={{ height: spacing.xxl }} />
     </ScrollView>
   );
 }
 
 // =====================================================
-// BILL ROW COMPONENT
+// BILL ROW SUBCOMPONENT
 // =====================================================
 function BillRow({ label, value, highlight, bold }) {
   return (
     <View style={styles.billRow}>
-      <Text style={[styles.billLabel, bold && { fontWeight: "700" }]}>
+      <Text
+        style={[
+          styles.billLabel,
+          bold && { fontWeight: fontWeights.bold, color: colors.textPrimary },
+        ]}
+      >
         {label}
       </Text>
       <Text
         style={[
           styles.billValue,
-          highlight && { color: "green" },
-          bold && { fontWeight: "700" },
+          highlight && { color: colors.success },
+          bold && { fontWeight: fontWeights.bold, color: colors.textPrimary },
         ]}
       >
         {value}
@@ -340,127 +401,109 @@ function BillRow({ label, value, highlight, bold }) {
 // STYLES
 // =====================================================
 const styles = StyleSheet.create({
-  container: { padding: 16, backgroundColor: "#F5F5F5" },
+  container: { padding: spacing.lg, backgroundColor: colors.background },
 
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 20,
-    marginBottom: 10,
+    fontSize: textSizes.lg,
+    fontWeight: fontWeights.bold,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
   },
 
   addressBox: {
-    backgroundColor: "#FFF",
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EEE",
-    marginBottom: 20,
+    padding: spacing.md,
+    borderRadius: radii.lg,
+    marginBottom: spacing.lg,
   },
-  addressLabel: { fontSize: 16, fontWeight: "600" },
-  addressLine: { color: "#555", marginVertical: 4 },
-  phone: { color: "#777" },
+  addressLabel: { fontSize: textSizes.md, fontWeight: fontWeights.semibold },
+  addressLine: { marginVertical: spacing.xs },
+  phone: { marginTop: spacing.xs },
 
   cartItem: {
     flexDirection: "row",
-    backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 12,
+    padding: spacing.md,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
-    marginBottom: 12,
+    marginBottom: spacing.md,
+    alignItems: "center",
   },
 
   cartImage: {
     width: 70,
     height: 70,
-    borderRadius: 12,
-    marginRight: 12,
+    borderRadius: radii.md,
+    marginRight: spacing.md,
   },
 
-  itemName: { fontSize: 16, fontWeight: "600" },
+  itemName: { fontSize: textSizes.md, fontWeight: fontWeights.semibold },
 
   priceRow: {
     flexDirection: "row",
     gap: 6,
-    marginTop: 4,
+    marginTop: spacing.xs,
     alignItems: "center",
   },
 
-  itemPriceDiscount: { fontSize: 15, fontWeight: "700" },
+  itemPriceDiscount: { fontSize: textSizes.md, fontWeight: fontWeights.bold },
   itemMRP: {
-    fontSize: 12,
+    fontSize: textSizes.sm,
     textDecorationLine: "line-through",
-    color: "#777",
   },
-  itemOff: { fontSize: 12, color: "green", fontWeight: "600" },
+  itemOff: { fontSize: textSizes.sm, fontWeight: fontWeights.semibold },
 
-  qtyRow: { flexDirection: "row", gap: 12, marginTop: 8 },
-  qtyBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#CCC",
-    alignItems: "center",
-    justifyContent: "center",
+  wishlistText: { marginTop: spacing.xs, fontSize: textSizes.sm },
+
+  itemTotal: {
+    fontSize: textSizes.md,
+    fontWeight: fontWeights.bold,
+    marginLeft: spacing.md,
   },
-
-  qtyBtnText: { fontSize: 18, fontWeight: "700" },
-  qtyText: { fontSize: 16, fontWeight: "700" },
-
-  wishlistText: { marginTop: 6, color: "#E91E63", fontSize: 13 },
-
-  itemTotal: { fontSize: 16, fontWeight: "700", marginLeft: 12 },
 
   paymentBox: {
-    backgroundColor: "#FFF",
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EEE",
-    marginBottom: 20,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    marginBottom: spacing.lg,
   },
 
   paymentRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: spacing.xs,
   },
-  paymentLabel: { fontSize: 15, fontWeight: "600" },
-  paymentSelected: { fontSize: 16, color: "green", fontWeight: "700" },
-  paymentDisabled: { fontSize: 14, color: "#B5B5B5" },
+  paymentLabel: { fontSize: textSizes.md, fontWeight: fontWeights.semibold },
+  paymentSelected: { fontSize: textSizes.md, fontWeight: fontWeights.bold },
+  paymentDisabled: { fontSize: textSizes.sm },
 
   payNote: {
-    fontSize: 12,
-    marginTop: 6,
-    color: "#777",
+    fontSize: textSizes.sm,
+    marginTop: spacing.xs,
     fontStyle: "italic",
   },
 
   billBox: {
-    backgroundColor: "#FFF",
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#EEE",
-    marginBottom: 20,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    marginBottom: spacing.lg,
   },
 
-  billTitle: { fontSize: 18, fontWeight: "700", marginBottom: 10 },
+  billTitle: {
+    fontSize: textSizes.lg,
+    fontWeight: fontWeights.bold,
+    marginBottom: spacing.sm,
+  },
 
   billRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: spacing.xs,
   },
 
-  billLabel: { fontSize: 15, color: "#555" },
-  billValue: { fontSize: 15, color: "#222" },
+  billLabel: { fontSize: textSizes.md },
+  billValue: { fontSize: textSizes.md },
 
   emptyContainer: {
-    padding: 40,
+    padding: spacing.xl,
     alignItems: "center",
   },
-  emptyText: { fontSize: 18, marginBottom: 14 },
+  emptyText: { fontSize: textSizes.lg, marginBottom: spacing.md },
 });

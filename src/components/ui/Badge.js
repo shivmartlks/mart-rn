@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, spacing, radius, textSizes } from "../../theme";
+import { colors, radii, textSizes } from "../../theme";
 
 export default function Badge({
   label,
@@ -52,13 +52,13 @@ const sizeStyles = {
     paddingVertical: 2,
     paddingHorizontal: 6,
     fontSize: textSizes.xs,
-    radius: radius.sm,
+    radius: radii.sm,
   },
   md: {
     paddingVertical: 4,
     paddingHorizontal: 10,
     fontSize: textSizes.sm,
-    radius: radius.md,
+    radius: radii.md,
   },
 };
 

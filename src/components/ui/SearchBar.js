@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, TextInput, TouchableOpacity, StyleSheet } from "react-native";
-import { colors, spacing, radius, textSizes } from "../../theme";
+import { colors, spacing, radii, textSizes } from "../../theme";
 import { Feather } from "@expo/vector-icons";
 
 export default function SearchBar({
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: colors.gray100,
-    borderRadius: radius.lg,
+    borderRadius: radii.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },

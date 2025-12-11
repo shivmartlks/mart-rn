@@ -12,8 +12,9 @@ import {
   colors,
   spacing,
   textSizes,
-  radius,
+  radii,
   componentTokens,
+  fontWeights,
 } from "../../theme";
 
 export default function Button({
@@ -40,20 +41,14 @@ export default function Button({
     sm: {
       height: 32,
       fontSize: textSizes.sm,
-      paddingVertical: spacing.xs,
-      borderRadius: radius.sm,
+      paddingVertical: spacing.sm,
+      borderRadius: radii.full,
     },
     md: {
       height: 40,
       fontSize: textSizes.md,
       paddingVertical: spacing.xs,
-      borderRadius: radius.md,
-    },
-    lg: {
-      height: 48,
-      fontSize: textSizes.lg,
-      paddingVertical: spacing.sm,
-      borderRadius: radius.lg,
+      borderRadius: radii.full,
     },
   };
 
@@ -177,6 +172,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   text: {
-    fontWeight: "600",
+    fontWeight: fontWeights.medium,
   },
 });

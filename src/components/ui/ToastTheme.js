@@ -1,7 +1,7 @@
 // src/theme/ToastTheme.js
 
 import { StyleSheet, View, Text } from "react-native";
-import { colors, radius, spacing, textSizes } from "../../theme";
+import { colors, radii, spacing, textSizes } from "../../theme";
 
 export const toastConfig = {
   success: ({ text1, text2 }) => (
@@ -30,7 +30,7 @@ const styles = StyleSheet.create({
   base: {
     width: "90%",
     marginTop: spacing.lg,
-    borderRadius: radius.lg,
+    borderRadius: radii.lg,
     padding: spacing.lg,
     alignSelf: "center",
   },

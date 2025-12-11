@@ -1,14 +1,14 @@
+// src/screens/ProductView.js
 import { useEffect, useState } from "react";
 import {
   View,
   Text,
   Image,
-  ScrollView,
-  StyleSheet,
   FlatList,
   Pressable,
   ActivityIndicator,
   TouchableOpacity,
+  StyleSheet,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -21,7 +21,10 @@ import {
 import { IMAGES } from "../../const/imageConst";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
-import { colors, textSizes, radius } from "../../theme/theme";
+import QuantitySelector from "../../components/ui/QuantitySelector";
+
+// Theme tokens
+import { colors, spacing, textSizes, radii, fontWeights } from "../../theme";
 
 export default function ProductView() {
   const navigation = useNavigation();
@@ -54,7 +57,7 @@ export default function ProductView() {
         .eq("subcategory_id", id)
         .order("name");
 
-      const groupIds = grps.map((g) => g.id);
+      const groupIds = (grps || []).map((g) => g.id);
 
       const { data: prods } = await supabase
         .from("products")
@@ -62,9 +65,9 @@ export default function ProductView() {
         .in("group_id", groupIds)
         .order("name");
 
-      setGroups(grps);
-      setProducts(prods);
-      if (grps.length) setActiveGroup(grps[0].id);
+      setGroups(grps || []);
+      setProducts(prods || []);
+      if (grps?.length) setActiveGroup(grps[0].id);
 
       if (user) {
         const count = await getCartCount(user.id);
@@ -130,9 +133,11 @@ export default function ProductView() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text style={{ marginTop: 10 }}>Loading products...</Text>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: spacing.sm, color: colors.textSecondary }}>
+          Loading products...
+        </Text>
       </View>
     );
   }
@@ -142,56 +147,48 @@ export default function ProductView() {
   // ------------------------------------
   const renderProduct = ({ item: p }) => {
     const qty = cartItems[p.id] || 0;
+    const mrp = p.mrp || p.price;
+    const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
+
+    const isValidImage = p.image_url?.startsWith("http");
 
     return (
-      <View style={styles.productCard}>
+      <View style={[styles.productCard]}>
         <Pressable
           onPress={() => navigation.navigate("ProductDetails", { product: p })}
           style={{ flex: 1 }}
         >
           <View style={styles.imageWrapper}>
             <Image
-              source={p.image_url ? { uri: p.image_url } : IMAGES.default}
+              source={isValidImage ? { uri: p.image_url } : IMAGES.default}
               style={styles.productImage}
             />
 
-            {/* Floating ADD / Qty (unchanged) */}
-            {qty === 0 ? (
-              <TouchableOpacity
-                onPress={() => handleAdd(p)}
-                style={styles.addFloatingBtn}
-              >
-                <Text style={styles.addFloatingText}>ADD</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.qtyFloatingBox}>
-                <Pressable
-                  style={styles.qtyBtnSmall}
-                  onPress={() => handleRemove(p)}
-                >
-                  <Text style={styles.qtyBtnText}>−</Text>
-                </Pressable>
-
-                <Text style={styles.qtyNumberFloating}>{qty}</Text>
-
-                <Pressable
-                  style={styles.qtyBtnSmall}
-                  onPress={() => handleAdd(p)}
-                >
-                  <Text style={styles.qtyBtnText}>+</Text>
-                </Pressable>
-              </View>
-            )}
+            {/* Floating ADD / Qty — use QuantitySelector (advanced) + style positioning */}
+            <QuantitySelector
+              value={qty}
+              variant="advanced"
+              mode="filled" // outline pill in product grid
+              size="sm"
+              onIncrease={() => handleAdd(p)}
+              onDecrease={() => handleRemove(p)}
+              style={{ position: "absolute", bottom: 8, right: 8 }} // floating placement
+            />
           </View>
 
-          <Text style={styles.productName}>{p.name}</Text>
+          <Text style={styles.productName} numberOfLines={2}>
+            {p.name}
+          </Text>
           <Text style={styles.shortDesc} numberOfLines={1}>
             {p.short_desc || p.description}
           </Text>
 
           <View style={styles.priceRow}>
             <Text style={styles.price}>₹{p.price}</Text>
-            <Text style={styles.mrp}>₹{p.mrp}</Text>
+            <Text style={styles.mrp}>₹{mrp}</Text>
+            {discount > 0 && (
+              <Text style={styles.discountBadge}>{discount}% OFF</Text>
+            )}
           </View>
         </Pressable>
       </View>
@@ -217,7 +214,7 @@ export default function ProductView() {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen]}>
       <View style={styles.mainContent}>
         {/* Left Pane: Group Sidebar */}
         <View style={styles.sidebar}>
@@ -234,17 +231,17 @@ export default function ProductView() {
           {/* Right Pane Header (for filters) */}
           <View style={styles.rightHeader}>
             <Text style={styles.rightHeaderText}>
-              {/* {groups.find((g) => g.id === activeGroup)?.name} */}
+              {groups.find((g) => g.id === activeGroup)?.name || ""}
             </Text>
             <View style={styles.headerActions}>
               <TouchableOpacity style={styles.actionButton}>
-                <Feather name="sliders" size={16} color={colors.black500} />
+                <Feather name="sliders" size={16} color={colors.textPrimary} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionButton}>
                 <Feather
                   name="bar-chart-2"
                   size={16}
-                  color={colors.black500}
+                  color={colors.textPrimary}
                   style={{ transform: [{ rotate: "90deg" }] }}
                 />
               </TouchableOpacity>
@@ -254,7 +251,9 @@ export default function ProductView() {
           {/* Product Grid */}
           {filteredProducts.length === 0 ? (
             <View style={styles.center}>
-              <Text>No products available in this group.</Text>
+              <Text style={{ color: colors.textSecondary }}>
+                No products available in this group.
+              </Text>
             </View>
           ) : (
             <FlatList
@@ -262,8 +261,11 @@ export default function ProductView() {
               renderItem={renderProduct}
               keyExtractor={(item) => item.id.toString()}
               numColumns={2}
-              contentContainerStyle={{ paddingHorizontal: 8 }}
-              columnWrapperStyle={{ gap: 8 }}
+              contentContainerStyle={{ paddingHorizontal: spacing.sm }}
+              columnWrapperStyle={{
+                justifyContent: "space-between",
+                marginBottom: spacing.sm,
+              }}
             />
           )}
         </View>
@@ -288,7 +290,7 @@ export default function ProductView() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.white50,
+    backgroundColor: colors.background,
   },
   mainContent: {
     flex: 1,
@@ -303,29 +305,29 @@ const styles = StyleSheet.create({
   // Sidebar (Left Pane)
   sidebar: {
     width: "28%",
-    backgroundColor: "#F8F8F8",
+    backgroundColor: colors.backgroundMuted || colors.background,
     borderRightWidth: 1,
-    borderRightColor: colors.gray200,
+    borderRightColor: colors.border,
   },
   groupItem: {
-    paddingVertical: 16,
-    paddingHorizontal: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.border,
   },
   activeGroupItem: {
-    backgroundColor: colors.white50,
-    borderLeftColor: colors.black800,
+    backgroundColor: colors.cardSoft || colors.cardLight,
+    borderLeftColor: colors.primary,
     borderLeftWidth: 3,
   },
   groupName: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: colors.black500,
+    fontSize: textSizes.sm,
+    fontWeight: fontWeights.medium,
+    color: colors.textSecondary,
   },
   activeGroupName: {
-    fontWeight: "700",
-    color: colors.black800,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
   },
 
   // Product Area (Right Pane)
@@ -333,168 +335,127 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rightHeader: {
-    padding: 12,
+    padding: spacing.sm,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: colors.gray200,
+    borderBottomColor: colors.border,
   },
   rightHeaderText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: textSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
   },
   headerActions: {
     flexDirection: "row",
-    gap: 8,
+    columnGap: spacing.sm, // not supported everywhere, but harmless; RN will ignore in older versions
   },
   actionButton: {
-    padding: 6,
-    borderRadius: 8,
+    padding: spacing.xs,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.gray200,
+    borderColor: colors.border,
+    marginLeft: spacing.xs,
   },
 
   productCard: {
-    flex: 1, // Allow items to expand and fill their column space
-    backgroundColor: colors.white50,
-    padding: 8,
-    borderRadius: 12,
+    flex: 1,
+    backgroundColor: colors.cardSoft,
+    padding: spacing.sm,
+    borderRadius: radii.md,
     borderWidth: 1,
-    borderColor: colors.gray200,
-    marginBottom: 8,
-    maxWidth: "50%",
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+    maxWidth: "48%",
+  },
+
+  imageWrapper: {
+    position: "relative",
+    marginBottom: spacing.sm,
+    borderRadius: radii.md,
+    overflow: "hidden",
   },
 
   productImage: {
     width: "100%",
-    aspectRatio: 1, // Creates a square image
-    marginBottom: 8,
-    backgroundColor: "#F0F0F0", // Background for the placeholder
+    aspectRatio: 1,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.gray100,
+  },
+
+  floatingControl: {
+    position: "absolute",
+    bottom: 8,
+    right: 8,
+    // don't set background here — QuantitySelector receives bg/borderColor/iconColor props
   },
 
   productName: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.black800,
+    fontSize: textSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
   },
 
   shortDesc: {
-    fontSize: 10,
-    color: "#777",
-    marginBottom: 6,
+    fontSize: textSizes.xs,
+    color: colors.textSecondary,
+    marginBottom: spacing.xs,
   },
 
   discountBadge: {
-    backgroundColor: "#DCFCE7",
-    color: "#15803D",
-    paddingHorizontal: 4,
+    backgroundColor: colors.successBg || colors.success + "22",
+    color: colors.success,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    fontSize: 10,
-    fontWeight: "600",
+    fontSize: textSizes.xs,
+    fontWeight: fontWeights.semibold,
     alignSelf: "flex-start",
   },
 
   priceRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
-    gap: 6,
+    marginTop: spacing.xs,
   },
 
   price: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: textSizes.md,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
+    marginRight: spacing.sm,
   },
 
   mrp: {
-    fontSize: 10,
+    fontSize: textSizes.sm,
     textDecorationLine: "line-through",
-    color: colors.gray500,
+    color: colors.textSecondary,
+    marginRight: spacing.sm,
   },
 
   qtyRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8,
+    marginTop: spacing.sm,
     justifyContent: "space-between",
   },
 
   qtyText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: textSizes.md,
+    fontWeight: fontWeights.semibold,
     minWidth: 20,
     textAlign: "center",
   },
 
   cartButton: {
     position: "absolute",
-    bottom: 30,
-    right: 20,
-    backgroundColor: "#000",
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    elevation: 5,
-  },
-
-  // Floating ADD Button
-  addFloatingBtn: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    backgroundColor: colors.white50,
-    borderWidth: 0.8, // thinner border
-    borderColor: colors.green300, // softer shade
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 6,
-    elevation: 2, // lighter shadow
-  },
-  addFloatingText: {
-    color: colors.green600,
-    fontWeight: "700",
-    fontSize: 11,
-  },
-
-  // Floating Qty Controller
-  qtyFloatingBox: {
-    position: "absolute",
-    bottom: 8,
-    right: 8,
-    backgroundColor: colors.green50,
-    borderWidth: 0.8, // thin border
-    borderColor: colors.green300,
-    borderRadius: 6,
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    elevation: 2,
-  },
-
-  qtyBtnSmall: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 0.8, // thinner
-    borderColor: colors.green300, // lighter shade
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.white50,
-  },
-  qtyBtnText: {
-    color: colors.green600,
-    fontSize: 16,
-    fontWeight: "700",
-    marginTop: -2,
-  },
-
-  qtyNumberFloating: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.green600,
+    bottom: spacing.xl,
+    right: spacing.lg,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 28,
+    elevation: 6,
   },
 });

@@ -6,7 +6,7 @@ import {
   colors,
   textSizes,
   spacing,
-  radius,
+  radii,
   componentTokens,
 } from "../../theme";
 
@@ -27,22 +27,16 @@ export default function Input({
   // NEW: dynamic size map
   const sizeMap = {
     sm: {
-      height: 36,
+      height: 32,
       fontSize: textSizes.sm,
       paddingVertical: spacing.xs,
-      radius: radius.sm,
+      radius: radii.sm,
     },
     md: {
-      height: 44,
+      height: 40,
       fontSize: textSizes.md,
-      paddingVertical: spacing.xs,
-      radius: radius.md,
-    },
-    lg: {
-      height: 52,
-      fontSize: textSizes.lg,
       paddingVertical: spacing.sm,
-      radius: radius.lg,
+      radius: radii.sm,
     },
   };
 

@@ -1,7 +1,7 @@
 // src/theme/index.js
 import { colors } from "./colors";
 import { spacing } from "./spacing";
-import { radius } from "./radius";
+import { radii } from "./radius";
 import { textSizes } from "./typography";
 import { fontWeights } from "./typography";
 import { shadows } from "./shadow";
@@ -11,7 +11,7 @@ import { variants } from "./variants";
 export {
   colors,
   spacing,
-  radius,
+  radii,
   textSizes,
   fontWeights,
   shadows,

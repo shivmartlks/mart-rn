@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  Alert,
-} from "react-native";
+import { View, Text, ScrollView, Alert } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
 import * as Location from "expo-location";
 import { Picker } from "@react-native-picker/picker";
-import Button from "../../components/ui/Button";
 
 import { useAuth } from "../../contexts/AuthContext";
+
+// UI Components (your new design system)
+import Card from "../../components/ui/Card";
+import Input from "../../components/ui/Input";
+import Button from "../../components/ui/Button";
+import ListTile from "../../components/ui/ListTile";
+import Divider from "../../components/ui/Divider";
+
+import { colors, spacing, textSizes, fontWeights, radii } from "../../theme";
 
 export default function AddAddress() {
   const navigation = useNavigation();
@@ -68,16 +69,13 @@ export default function AddAddress() {
 
     setCoords({ lat: latitude, lng: longitude });
 
-    // Reverse geocode
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
     );
     const json = await res.json();
 
-    const fullAddress = json.display_name || "";
+    setAddress(json.display_name || "");
     const pin = json.address?.postcode || "";
-
-    setAddress(fullAddress);
     setPincode(pin);
     checkServiceability(pin);
   }
@@ -107,9 +105,7 @@ export default function AddAddress() {
         is_default: isFirstAddress ? true : isDefault,
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       navigation.navigate("Cart");
     } catch (err) {
@@ -120,155 +116,150 @@ export default function AddAddress() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Add Address</Text>
-
-      {/* Use Location */}
-      <Button onPress={getCurrentLocation} style={{ marginBottom: 16 }}>
-        Use My Current Location
-      </Button>
-
-      {/* Label Picker */}
-      <View style={styles.pickerBox}>
-        <Picker selectedValue={label} onValueChange={(v) => setLabel(v)}>
-          <Picker.Item label="Home" value="home" />
-          <Picker.Item label="Office" value="office" />
-          <Picker.Item label="Other" value="other" />
-        </Picker>
-      </View>
-
-      {/* Address */}
-      <TextInput
-        placeholder="Full Address"
-        style={styles.inputBox}
-        multiline
-        value={address}
-        onChangeText={setAddress}
-      />
-
-      {/* Pincode */}
-      <TextInput
-        placeholder="Pincode"
-        style={styles.inputBox}
-        keyboardType="number-pad"
-        value={pincode}
-        onChangeText={(v) => {
-          setPincode(v);
-          if (v.length === 6) checkServiceability(v);
+    <ScrollView
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+      }}
+      contentContainerStyle={{
+        padding: spacing.lg,
+      }}
+    >
+      {/* TITLE */}
+      <Text
+        style={{
+          fontSize: textSizes.xl,
+          fontWeight: fontWeights.semibold,
+          marginBottom: spacing.lg,
+          color: colors.textPrimary,
         }}
-      />
+      >
+        Add Address
+      </Text>
 
-      {/* Serviceability */}
-      {serviceable === false && (
-        <Text style={styles.errorText}>❌ Delivery not available here</Text>
-      )}
-      {serviceable === true && (
-        <Text style={styles.successText}>✔ Delivery available</Text>
-      )}
-
-      {/* Phone */}
-      <TextInput
-        placeholder="Phone Number"
-        style={styles.inputBox}
-        keyboardType="phone-pad"
-        value={phone}
-        onChangeText={setPhone}
-      />
-
-      {/* Instructions */}
-      <TextInput
-        placeholder="Delivery Instructions (optional)"
-        style={styles.inputBox}
-        multiline
-        value={instructions}
-        onChangeText={setInstructions}
-      />
-
-      {/* Default Checkbox */}
-      {!isFirstAddress && (
+      {/* USE CURRENT LOCATION */}
+      <Card elevated style={{ marginBottom: spacing.lg }}>
         <Button
-          variant="ghost"
-          style={styles.checkboxRow}
-          onPress={() => setIsDefault(!isDefault)}
+          size="lg"
+          onPress={getCurrentLocation}
+          style={{ marginBottom: spacing.sm }}
         >
-          <>
-            <View
-              style={[styles.checkbox, isDefault && styles.checkboxChecked]}
-            />
-            <Text style={styles.checkboxLabel}>Set as default address</Text>
-          </>
+          Use My Current Location
         </Button>
-      )}
+      </Card>
 
-      {/* Save Button */}
-      <Button block onPress={saveAddress} loading={saving} disabled={saving}>
+      {/* MAIN FORM CARD */}
+      <Card elevated style={{ marginBottom: spacing.xl }}>
+        {/* LABEL PICKER */}
+        <View
+          style={{
+            padding: spacing.md,
+            borderRadius: radii.md,
+            borderWidth: 1,
+            borderColor: colors.border,
+            marginBottom: spacing.md,
+          }}
+        >
+          <Picker
+            selectedValue={label}
+            onValueChange={setLabel}
+            dropdownIconColor={colors.textPrimary}
+            style={{ color: colors.textPrimary }}
+          >
+            <Picker.Item label="Home" value="home" />
+            <Picker.Item label="Office" value="office" />
+            <Picker.Item label="Other" value="other" />
+          </Picker>
+        </View>
+
+        {/* ADDRESS INPUTS */}
+        <Input
+          placeholder="Full Address"
+          value={address}
+          onChangeText={setAddress}
+          size="lg"
+          multiline
+          style={{ marginBottom: spacing.md }}
+        />
+
+        <Input
+          placeholder="Pincode"
+          value={pincode}
+          keyboardType="number-pad"
+          onChangeText={(v) => {
+            setPincode(v);
+            if (v.length === 6) checkServiceability(v);
+          }}
+          size="md"
+          style={{ marginBottom: spacing.sm }}
+        />
+
+        {/* SERVICEABILITY MESSAGE */}
+        {serviceable === true && (
+          <Text style={{ color: colors.success, marginBottom: spacing.sm }}>
+            ✔ Delivery available
+          </Text>
+        )}
+        {serviceable === false && (
+          <Text style={{ color: colors.danger, marginBottom: spacing.sm }}>
+            ❌ Delivery not available here
+          </Text>
+        )}
+
+        <Input
+          placeholder="Phone Number"
+          value={phone}
+          keyboardType="phone-pad"
+          onChangeText={setPhone}
+          size="md"
+          style={{ marginBottom: spacing.md }}
+        />
+
+        <Input
+          placeholder="Delivery Instructions (optional)"
+          value={instructions}
+          onChangeText={setInstructions}
+          size="lg"
+          multiline
+          style={{ marginBottom: spacing.lg }}
+        />
+
+        {/* DEFAULT ADDRESS CHECKBOX */}
+        {!isFirstAddress && (
+          <ListTile
+            title="Set as default address"
+            left={
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  borderWidth: 2,
+                  borderColor: colors.textPrimary,
+                  backgroundColor: isDefault
+                    ? colors.textPrimary
+                    : "transparent",
+                }}
+              />
+            }
+            onPress={() => setIsDefault(!isDefault)}
+            style={{
+              paddingVertical: spacing.md,
+            }}
+          />
+        )}
+      </Card>
+
+      {/* SAVE BUTTON */}
+      <Button
+        block
+        size="lg"
+        loading={saving}
+        disabled={saving}
+        onPress={saveAddress}
+      >
         Save Address
       </Button>
     </ScrollView>
   );
 }
-
-// 🎨 STYLES ---------------------------------------------------------
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: "#F5F5F5",
-  },
-
-  header: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-
-  pickerBox: {
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 10,
-    marginBottom: 12,
-  },
-
-  inputBox: {
-    backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#DDD",
-    fontSize: 16,
-    marginBottom: 12,
-  },
-
-  errorText: {
-    color: "#D32F2F",
-    marginBottom: 6,
-  },
-  successText: {
-    color: "#15803D",
-    marginBottom: 6,
-  },
-
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    justifyContent: "flex-start",
-  },
-
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: "#444",
-    marginRight: 10,
-  },
-  checkboxChecked: {
-    backgroundColor: "#000",
-  },
-
-  checkboxLabel: {
-    fontSize: 16,
-    color: "#333",
-  },
-});

@@ -109,21 +109,21 @@ export default function EditProfile() {
         {/* Buttons */}
         <View style={styles.buttonRow}>
           <Button
-            onPress={handleSave}
-            loading={saving}
-            disabled={saving}
-            style={{ flex: 1 }}
-          >
-            Save Changes
-          </Button>
-
-          <Button
             variant="secondary"
             onPress={() => navigation.navigate("Profile")}
             disabled={saving}
             style={{ flex: 1 }}
           >
             Cancel
+          </Button>
+
+          <Button
+            onPress={handleSave}
+            loading={saving}
+            disabled={saving}
+            style={{ flex: 1 }}
+          >
+            Save Changes
           </Button>
         </View>
       </View>

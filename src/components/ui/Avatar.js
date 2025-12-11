@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
-import { colors, textSizes, spacing, radius } from "../../theme";
+import { colors, textSizes, spacing, radii } from "../../theme";
 
 export default function Avatar({
   size = "md", // sm | md | lg | xl
@@ -51,7 +51,7 @@ export default function Avatar({
         {
           width: s.dimension,
           height: s.dimension,
-          borderRadius: rounded ? s.dimension / 2 : radius.md,
+          borderRadius: rounded ? s.dimension / 2 : radii.md,
           backgroundColor: colors.gray200,
           justifyContent: "center",
           alignItems: "center",
@@ -70,7 +70,7 @@ export default function Avatar({
           style={{
             width: "100%",
             height: "100%",
-            borderRadius: rounded ? s.dimension / 2 : radius.md,
+            borderRadius: rounded ? s.dimension / 2 : radii.md,
           }}
         />
       ) : (

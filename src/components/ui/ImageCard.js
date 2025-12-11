@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from "react-native";
-import { colors, spacing, radius, textSizes, shadows } from "../../theme";
+import { colors, spacing, radii, textSizes, shadows } from "../../theme";
 import Badge from "./Badge";
 import Button from "./Button";
 
@@ -113,7 +113,7 @@ export default function ImageCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.cardBG,
-    borderRadius: radius.lg,
+    borderRadius: radii.lg,
     overflow: "hidden",
     marginBottom: spacing.lg,
   },
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.red500,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: radius.sm,
+    borderRadius: radii.sm,
   },
 
   discountText: {

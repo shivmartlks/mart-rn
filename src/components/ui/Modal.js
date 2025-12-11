@@ -8,7 +8,7 @@ import {
   TouchableWithoutFeedback,
   StyleSheet,
 } from "react-native";
-import { colors, radius, spacing, textSizes, shadows } from "../../theme";
+import { colors, radii, spacing, textSizes, shadows } from "../../theme";
 import Button from "./Button";
 
 export default function Modal({
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     width: "82%",
     backgroundColor: colors.cardBG,
     padding: spacing.xl,
-    borderRadius: radius.lg + 4, // ~20
+    borderRadius: radii.lg + 4, // ~20
     ...shadows.card,
   },
 
