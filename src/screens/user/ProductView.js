@@ -128,7 +128,7 @@ export default function ProductView() {
   // Filtered products
   // ------------------------------------
   const filteredProducts = products.filter(
-    (p) => p.group_id === activeGroup && p.is_available
+    (p) => p.group_id === activeGroup // Include all products in the active group
   );
 
   if (loading) {
@@ -151,20 +151,31 @@ export default function ProductView() {
     const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
 
     const isValidImage = p.image_url?.startsWith("http");
+    const isOutOfStock = !p.is_available;
+    const isLowStock = p.stock_value < 5 && p.stock_value > 0;
 
     return (
-      <View style={[styles.productCard]}>
-        <Pressable
-          onPress={() => navigation.navigate("ProductDetails", { product: p })}
-          style={{ flex: 1 }}
-        >
-          <View style={styles.imageWrapper}>
-            <Image
-              source={isValidImage ? { uri: p.image_url } : IMAGES.default}
-              style={styles.productImage}
-            />
+      <View
+        style={[
+          styles.productCard,
+          isOutOfStock && { opacity: 0.5 }, // Gray out the product if out of stock
+        ]}
+      >
+        <View style={styles.imageWrapper}>
+          <Image
+            source={isValidImage ? { uri: p.image_url } : IMAGES.default}
+            style={styles.productImage}
+          />
 
-            {/* Floating ADD / Qty — use QuantitySelector (advanced) + style positioning */}
+          {/* Out of Stock Label */}
+          {isOutOfStock && (
+            <View style={styles.outOfStockOverlay}>
+              <Text style={styles.outOfStockText}>Out of Stock</Text>
+            </View>
+          )}
+
+          {/* Floating ADD / Qty — use QuantitySelector (advanced) + style positioning */}
+          {!isOutOfStock && (
             <QuantitySelector
               value={qty}
               variant="advanced"
@@ -173,24 +184,30 @@ export default function ProductView() {
               onIncrease={() => handleAdd(p)}
               onDecrease={() => handleRemove(p)}
               style={{ position: "absolute", bottom: 8, right: 8 }} // floating placement
+              disableIncrease={qty >= p.stock_value} // Disable + button if stock is exceeded
             />
-          </View>
+          )}
+        </View>
 
-          <Text style={styles.productName} numberOfLines={2}>
-            {p.name}
-          </Text>
-          <Text style={styles.shortDesc} numberOfLines={1}>
-            {p.short_desc || p.description}
-          </Text>
+        <Text style={styles.productName} numberOfLines={2}>
+          {p.name}
+        </Text>
+        <Text style={styles.shortDesc} numberOfLines={1}>
+          {p.short_desc || p.description}
+        </Text>
 
-          <View style={styles.priceRow}>
-            <Text style={styles.price}>₹{p.price}</Text>
-            <Text style={styles.mrp}>₹{mrp}</Text>
-            {discount > 0 && (
-              <Text style={styles.discountBadge}>{discount}% OFF</Text>
-            )}
-          </View>
-        </Pressable>
+        <View style={styles.priceRow}>
+          <Text style={styles.price}>₹{p.price}</Text>
+          <Text style={styles.mrp}>₹{mrp}</Text>
+          {discount > 0 && (
+            <Text style={styles.discountBadge}>{discount}% OFF</Text>
+          )}
+        </View>
+
+        {/* Stock Warnings */}
+        {isLowStock && !isOutOfStock && (
+          <Text style={styles.lowStockWarning}>Hurry, only few left</Text>
+        )}
       </View>
     );
   };
@@ -287,10 +304,11 @@ export default function ProductView() {
 // --------------------------------------------------------
 // STYLES
 // --------------------------------------------------------
+// Updated background color to match the profile page
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.screenBG, // Updated to use the same background color as the profile page
   },
   mainContent: {
     flex: 1,
@@ -305,7 +323,7 @@ const styles = StyleSheet.create({
   // Sidebar (Left Pane)
   sidebar: {
     width: "28%",
-    backgroundColor: colors.backgroundMuted || colors.background,
+    backgroundColor: colors.backgroundMuted || colors.screenBG, // Updated to match the profile page
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },
@@ -457,5 +475,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: 28,
     elevation: 6,
+  },
+
+  lowStockWarning: {
+    color: colors.warning, // Orange text color
+    fontSize: textSizes.sm,
+    fontWeight: fontWeights.medium,
+    marginTop: spacing.xs,
+  },
+  outOfStockWarning: {
+    color: colors.textSecondary,
+    fontSize: textSizes.sm,
+    fontWeight: fontWeights.bold,
+    marginTop: spacing.xs,
+  },
+
+  outOfStockOverlay: {
+    position: "absolute",
+    top: "50%", // Center vertically within the image
+    left: "50%", // Center horizontally within the image
+    transform: [{ translateX: -50 }, { translateY: -50 }], // Adjust for true center
+    height: 32, // Fixed height
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.md, // Added padding for better text alignment
+  },
+  outOfStockText: {
+    color: colors.white50,
+    fontSize: textSizes.sm,
+    fontWeight: fontWeights.bold,
   },
 });
