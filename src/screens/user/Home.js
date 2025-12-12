@@ -17,7 +17,7 @@ import FormRow from "../../components/ui/FormRow";
 import { colors, spacing, textSizes } from "../../theme";
 import { Feather } from "@expo/vector-icons";
 
-export default function UserDashboard() {
+export default function Home() {
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.heading}>UI Component Showcase</Text>

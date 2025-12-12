@@ -335,8 +335,8 @@ const styles = StyleSheet.create({
   },
   activeGroupItem: {
     backgroundColor: colors.cardSoft || colors.cardLight,
-    borderLeftColor: colors.primary,
-    borderLeftWidth: 3,
+    borderRightColor: colors.primary, // Changed from borderLeftColor to borderRightColor
+    borderRightWidth: 3, // Moved the active indicator to the right side
   },
   groupName: {
     fontSize: textSizes.sm,

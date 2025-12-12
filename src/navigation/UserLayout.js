@@ -2,7 +2,7 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Header from "../components/Header";
 
-import UserDashboard from "../screens/user/UserDashboard";
+import Home from "../screens/user/Home"; // Updated import to Home
 import Shop from "../screens/user/Shop";
 import Cart from "../screens/user/Cart";
 import Orders from "../screens/user/Orders";
@@ -44,7 +44,7 @@ export default function UserLayout() {
         },
       })}
     >
-      <Tab.Screen name="UserDashboard" component={UserDashboard} />
+      <Tab.Screen name="Home" component={Home} />
       <Tab.Screen name="Shop" component={Shop} />
       <Tab.Screen name="Cart" component={Cart} />
       <Tab.Screen name="Orders" component={Orders} />
