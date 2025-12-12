@@ -42,7 +42,9 @@ export default function Shop() {
     return (
       <Pressable
         key={sub.id}
-        onPress={() => navigation.navigate("ProductView", { id: sub.id })}
+        onPress={() =>
+          navigation.navigate("ProductView", { id: sub.id, name: sub.name })
+        }
         style={styles.subItem}
       >
         <View style={styles.imageContainer}>

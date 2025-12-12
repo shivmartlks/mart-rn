@@ -28,7 +28,11 @@ export default function UserStack() {
       <Stack.Screen
         name="ProductView"
         component={ProductView}
-        options={{ header: () => <Header title="Product" showBack /> }}
+        options={({ route }) => ({
+          header: () => (
+            <Header title={route?.params?.name ?? "Product"} showBack />
+          ),
+        })}
       />
 
       <Stack.Screen
