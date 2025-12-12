@@ -7,9 +7,14 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
+import { fontWeights } from "../../theme";
+import { colors, spacing, textSizes } from "../../theme";
+import OrdersEmptySvg from "../../../assets/orders_empty.svg";
+import Button from "../../components/ui/Button";
 
 export default function Orders() {
   const { user } = useAuth();
@@ -33,54 +38,78 @@ export default function Orders() {
     setLoading(false);
   }
 
-  if (loading)
+  if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text style={{ marginTop: 10 }}>Loading orders...</Text>
-      </View>
-    );
-
-  if (!orders.length)
-    return (
-      <View style={styles.center}>
-        <Text style={{ color: "#777" }}>
-          You haven't placed any orders yet.
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: spacing.sm, color: colors.textSecondary }}>
+          Loading orders...
         </Text>
       </View>
     );
+  }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>My Orders</Text>
-
-      {orders.map((order) => (
-        <Pressable
-          key={order.id}
-          style={styles.orderCard}
-          onPress={() => navigation.navigate("OrderDetails", { id: order.id })}
-        >
-          {/* Amount + Status */}
-          <View style={styles.rowBetween}>
-            <Text style={styles.amount}>₹{order.total_amount}</Text>
-
-            <View style={[styles.statusBadge, statusColor(order.status)]}>
-              <Text style={[styles.statusText, statusTextColor(order.status)]}>
-                {order.status}
-              </Text>
-            </View>
-          </View>
-
-          {/* Placed date */}
-          <Text style={styles.date}>
-            Placed on {new Date(order.created_at).toLocaleDateString()}
+    <View style={styles.wrapper}>
+      {orders.length === 0 ? (
+        <View style={styles.emptyWrap}>
+          <OrdersEmptySvg width={160} height={160} />
+          <Text style={styles.emptyTitle}>No orders yet</Text>
+          <Text style={styles.emptySub}>
+            Place your first order to see it here.
           </Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.container}>
+          <Text style={styles.header}>My Orders</Text>
 
-          {/* View Details */}
-          <Text style={styles.viewMore}>View Details →</Text>
-        </Pressable>
-      ))}
-    </ScrollView>
+          {orders.map((order) => (
+            <Pressable
+              key={order.id}
+              style={styles.orderCard}
+              onPress={() =>
+                navigation.navigate("OrderDetails", { id: order.id })
+              }
+            >
+              {/* Amount + Status */}
+              <View style={styles.rowBetween}>
+                <Text style={styles.amount}>₹{order.total_amount}</Text>
+
+                <View style={[styles.statusBadge, statusColor(order.status)]}>
+                  <Text
+                    style={[styles.statusText, statusTextColor(order.status)]}
+                  >
+                    {order.status}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Placed date */}
+              <Text style={styles.date}>
+                Placed on {new Date(order.created_at).toLocaleDateString()}
+              </Text>
+
+              {/* View Details */}
+              <Text style={styles.viewMore}>View Details →</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* Sticky Footer CTA */}
+      <SafeAreaView edges={["bottom"]} style={styles.footerSafeArea}>
+        <View style={styles.footerInner}>
+          <Button
+            block
+            onPress={() =>
+              navigation.navigate("UserTabs", { screen: "Categories" })
+            }
+          >
+            Browse Categories
+          </Button>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -172,7 +201,42 @@ const styles = StyleSheet.create({
 
   center: {
     flex: 1,
-    paddingTop: 80,
+    paddingTop: spacing.xl,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.screenBG,
+  },
+
+  wrapper: { flex: 1, backgroundColor: colors.screenBG },
+  emptyWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.screenBG,
+    paddingHorizontal: spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: textSizes.lg,
+    color: colors.textPrimary,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  emptySub: {
+    fontSize: textSizes.md,
+    color: colors.textSecondary,
+    textAlign: "center",
+  },
+  footerSafeArea: {
+    backgroundColor: colors.cardBG,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  footerInner: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.cardBG,
   },
 });

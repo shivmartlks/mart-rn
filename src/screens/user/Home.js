@@ -16,8 +16,11 @@ import SearchBar from "../../components/ui/SearchBar";
 import FormRow from "../../components/ui/FormRow";
 import { colors, spacing, textSizes } from "../../theme";
 import { Feather } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 
 export default function Home() {
+  const navigation = useNavigation();
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.heading}>UI Component Showcase</Text>

@@ -9,7 +9,6 @@ import Card from "../../components/ui/Card";
 import Modal from "../../components/ui/Modal";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import { showSuccess } from "../../utils/toastUtils";
-import { IMAGES } from "../../const/imageConst";
 import AddressEmpty from "../../../assets/address_empty.svg";
 
 export default function ManageAddresses() {

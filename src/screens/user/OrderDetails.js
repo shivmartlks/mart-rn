@@ -8,7 +8,9 @@ import {
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import Button from "../../components/ui/Button";
+import { colors, spacing, textSizes, fontWeights } from "../../theme";
+import Card from "../../components/ui/Card";
+import Divider from "../../components/ui/Divider";
 
 export default function OrderDetails() {
   const navigation = useNavigation();
@@ -36,66 +38,59 @@ export default function OrderDetails() {
   if (loading)
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text style={{ marginTop: 10 }}>Loading order...</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: spacing.sm, color: colors.textSecondary }}>
+          Loading order...
+        </Text>
       </View>
     );
 
   if (!order)
     return (
       <View style={styles.center}>
-        <Text style={{ color: "red", fontSize: 16 }}>Order not found.</Text>
+        <Text style={{ color: colors.danger, fontSize: textSizes.md }}>
+          Order not found.
+        </Text>
       </View>
     );
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Order Details</Text>
-
-      {/* Back Button */}
-      <Button
-        variant="ghost"
-        onPress={() => navigation.goBack()}
-        style={styles.backBtn}
-        textStyle={styles.backBtnText}
-      >
-        ← Back to Orders
-      </Button>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ padding: spacing.lg }}
+    >
+      {/* Back button removed: header already shows back */}
 
       {/* Amount + Status */}
-      <View style={styles.card}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <View style={styles.rowBetween}>
           <Text style={styles.amount}>₹{order.total_amount}</Text>
-
-          <View style={[styles.statusChip, statusColor(order.status)]}>
-            <Text style={[styles.statusText, statusTextColor(order.status)]}>
-              {order.status}
+          <View style={[styles.statusChip, statusBg(order.status)]}>
+            <Text style={[styles.statusText, statusFg(order.status)]}>
+              {String(order.status).toLowerCase()}
             </Text>
           </View>
         </View>
-
         <Text style={styles.date}>
           Ordered on {new Date(order.created_at).toLocaleString()}
         </Text>
-      </View>
+      </Card>
 
       {/* Address */}
-      <View style={styles.card}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <Text style={styles.cardTitle}>Delivery Address</Text>
-
         <Text style={styles.addressLine}>{order.address_line}</Text>
         <Text style={styles.muted}>Pincode: {order.pincode}</Text>
         <Text style={styles.muted}>📞 {order.phone}</Text>
-
         {order.delivery_instructions ? (
           <Text style={styles.note}>Note: {order.delivery_instructions}</Text>
         ) : null}
-      </View>
+      </Card>
 
       {/* Items */}
-      <View style={styles.card}>
+      <Card style={{ marginBottom: spacing.lg }}>
         <Text style={styles.cardTitle}>Items</Text>
-
+        <Divider />
         {order.items.map((item, idx) => (
           <View key={idx} style={styles.itemRow}>
             <Text style={styles.itemName}>{item.name}</Text>
@@ -104,148 +99,117 @@ export default function OrderDetails() {
             </Text>
           </View>
         ))}
-      </View>
+      </Card>
 
       {/* Payment */}
-      <View style={styles.card}>
+      <Card>
         <Text style={styles.cardTitle}>Payment</Text>
         <Text style={styles.muted}>
           {order.payment_mode?.toUpperCase() || "N/A"}
         </Text>
-      </View>
+      </Card>
     </ScrollView>
   );
 }
 
-// 🔥 STATUS BADGE COLORS
-function statusColor(status) {
-  switch (status) {
+// Theme-based status colors
+function statusBg(status) {
+  switch (String(status).toLowerCase()) {
     case "delivered":
-      return { backgroundColor: "#D1FAE5" };
+      return { backgroundColor: colors.green100 };
     case "pending":
-      return { backgroundColor: "#FFEDD5" };
+      return { backgroundColor: colors.orange100 };
     case "cancelled":
-      return { backgroundColor: "#FEE2E2" };
+      return { backgroundColor: colors.red100 };
     default:
-      return { backgroundColor: "#DBEAFE" };
+      return { backgroundColor: colors.softblue100 };
   }
 }
-
-function statusTextColor(status) {
-  switch (status) {
+function statusFg(status) {
+  switch (String(status).toLowerCase()) {
     case "delivered":
-      return { color: "#047857" };
+      return { color: colors.green700 };
     case "pending":
-      return { color: "#C2410C" };
+      return { color: colors.orange700 };
     case "cancelled":
-      return { color: "#B91C1C" };
+      return { color: colors.red700 };
     default:
-      return { color: "#1D4ED8" };
+      return { color: colors.gray800 };
   }
 }
 
 // 🎨 STYLES ------------------------------
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: "#F5F5F5",
+    flex: 1,
+    backgroundColor: colors.screenBG,
   },
-
   center: {
     flex: 1,
-    paddingTop: 100,
+    paddingTop: spacing.xl,
     alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.screenBG,
   },
-
-  header: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-
-  backBtn: {
-    justifyContent: "flex-start",
-    marginBottom: 14,
-  },
-  backBtnText: {
-    color: "#555",
-    fontWeight: "normal",
-    fontSize: 16,
-  },
-
-  card: {
-    backgroundColor: "#FFF",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    marginBottom: 16,
-  },
-
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   amount: {
-    fontSize: 22,
-    fontWeight: "700",
+    fontSize: textSizes.xl,
+    fontWeight: fontWeights.bold,
+    color: colors.textPrimary,
   },
-
   statusChip: {
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 12,
+    alignSelf: "flex-start",
   },
-
   statusText: {
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: textSizes.xs,
+    fontWeight: fontWeights.semibold,
     textTransform: "capitalize",
   },
-
   date: {
-    marginTop: 6,
-    color: "#777",
-    fontSize: 13,
+    marginTop: spacing.xs,
+    color: colors.textSecondary,
+    fontSize: textSizes.sm,
   },
-
   cardTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
+    fontSize: textSizes.md,
+    fontWeight: fontWeights.semibold,
+    color: colors.textPrimary,
+    marginBottom: spacing.sm,
   },
-
   addressLine: {
-    color: "#333",
-    fontSize: 16,
+    color: colors.textPrimary,
+    fontSize: textSizes.md,
   },
-
   muted: {
-    color: "#666",
+    color: colors.textSecondary,
     marginVertical: 2,
+    fontSize: textSizes.sm,
   },
-
   note: {
-    marginTop: 5,
-    color: "#444",
+    marginTop: spacing.xs,
+    color: colors.textSecondary,
     fontStyle: "italic",
   },
-
   itemRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderColor: "#EEE",
+    borderColor: colors.divider,
   },
-
   itemName: {
-    fontSize: 16,
-    color: "#222",
+    fontSize: textSizes.md,
+    color: colors.textPrimary,
   },
   itemQty: {
-    color: "#666",
+    color: colors.textSecondary,
+    fontSize: textSizes.sm,
   },
 });

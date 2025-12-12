@@ -18,7 +18,7 @@ import Input from "../../components/ui/Input";
 import FormRow from "../../components/ui/FormRow";
 import ListTile from "../../components/ui/ListTile";
 import Switch from "../../components/ui/Switch";
-import { colors, spacing, textSizes, fontWeights } from "../../theme";
+import { colors, spacing, textSizes } from "../../theme";
 
 export default function EditAddress() {
   const navigation = useNavigation();

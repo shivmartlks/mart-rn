@@ -11,6 +11,7 @@ import SelectAddress from "../screens/user/SelectAddress";
 import OrderDetails from "../screens/user/OrderDetails";
 import ProductDetails from "../screens/user/ProductDetails";
 import Wishlist from "../screens/user/Wishlist";
+import Orders from "../screens/user/Orders";
 
 const Stack = createNativeStackNavigator();
 
@@ -78,6 +79,12 @@ export default function UserStack() {
         name="OrderDetails"
         component={OrderDetails}
         options={{ header: () => <Header title="Order Details" showBack /> }}
+      />
+
+      <Stack.Screen
+        name="Orders"
+        component={Orders}
+        options={{ header: () => <Header title="Orders" showBack /> }}
       />
     </Stack.Navigator>
   );
