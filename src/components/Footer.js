@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Feather from "react-native-vector-icons/Feather";
-import { colors, spacing, textSizes } from "../theme";
+import { colors, fontWeights, spacing, textSizes } from "../theme";
 import { userTabs, adminTabs } from "../const/FooterTabsConfig";
 
 // Footer acts as a custom tabBar for bottom tab navigator
@@ -96,9 +96,9 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: textSizes.xs,
-    fontWeight: "500",
+    fontWeight: fontWeights.medium,
   },
   activeLabel: {
-    fontWeight: "600",
+    fontWeight: fontWeights.semibold,
   },
 });

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { colors, textSizes, spacing } from "../../theme";
+import { colors, textSizes, spacing, fontWeights } from "../../theme";
 
 export default function ListTile({
   title,
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: textSizes.md,
     color: colors.textPrimary,
-    fontWeight: "500",
+    fontWeight: fontWeights.medium,
   },
 
   subtitle: {

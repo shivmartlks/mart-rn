@@ -13,6 +13,7 @@ import { supabase } from "../../services/supabase";
 import { useNavigation } from "@react-navigation/native";
 import { colors, textSizes, radius } from "../../theme/theme";
 import { IMAGES } from "../../const/imageConst";
+import { fontWeights } from "../../theme";
 
 export default function Shop() {
   const [categories, setCategories] = useState([]);
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
 
   subName: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: fontWeights.medium,
     color: colors.black800,
     marginTop: 2,
     textAlign: "center",

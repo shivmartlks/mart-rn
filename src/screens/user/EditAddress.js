@@ -2,17 +2,24 @@ import { useEffect, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { showSuccess } from "../../utils/toastUtils";
 
 import Button from "../../components/ui/Button";
+import Card from "../../components/ui/Card";
+import Input from "../../components/ui/Input";
+import FormRow from "../../components/ui/FormRow";
+import ListTile from "../../components/ui/ListTile";
+import Switch from "../../components/ui/Switch";
+import { colors, spacing, textSizes, fontWeights } from "../../theme";
+
 export default function EditAddress() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -27,6 +34,14 @@ export default function EditAddress() {
   const [totalAddresses, setTotalAddresses] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [original, setOriginal] = useState({
+    label: "home",
+    address: "",
+    phone: "",
+    pincode: "",
+    instructions: "",
+    isDefault: false,
+  });
 
   useEffect(() => {
     loadCount();
@@ -51,7 +66,7 @@ export default function EditAddress() {
 
     if (error) {
       console.error(error);
-      Alert.alert("Error", "Failed to load address.");
+      alert("Failed to load address.");
       return;
     }
 
@@ -62,10 +77,31 @@ export default function EditAddress() {
     setInstructions(data.delivery_instructions || "");
     setIsDefault(data.is_default);
 
+    // store original snapshot for dirty check
+    setOriginal({
+      label: data.label,
+      address: data.address_line,
+      phone: data.phone,
+      pincode: data.pincode,
+      instructions: data.delivery_instructions || "",
+      isDefault: data.is_default,
+    });
+
     setLoading(false);
   }
 
+  // derived dirty flag
+  const isDirty =
+    label !== original.label ||
+    address !== original.address ||
+    phone !== original.phone ||
+    pincode !== original.pincode ||
+    instructions !== original.instructions ||
+    isDefault !== original.isDefault;
+
   async function save() {
+    // guard: avoid unnecessary calls
+    if (!isDirty) return;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -82,10 +118,11 @@ export default function EditAddress() {
 
       if (error) throw error;
 
-      Alert.alert("Success", "Address updated!");
+      // success toast instead of alert
+      showSuccess("Address updated", "Your changes have been saved.");
       navigation.navigate("ManageAddresses");
     } catch (err) {
-      Alert.alert("Error", err.message || "Failed to update address.");
+      alert(err.message || "Failed to update address.");
     } finally {
       setSaving(false);
     }
@@ -94,150 +131,151 @@ export default function EditAddress() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text style={{ marginTop: 10 }}>Loading address...</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ marginTop: spacing.sm, color: colors.textSecondary }}>
+          Loading address...
+        </Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Edit Address</Text>
-
-      {/* Label Picker */}
-      <View style={styles.pickerBox}>
-        <Picker selectedValue={label} onValueChange={(v) => setLabel(v)}>
-          <Picker.Item label="Home" value="home" />
-          <Picker.Item label="Office" value="office" />
-          <Picker.Item label="Other" value="other" />
-        </Picker>
-      </View>
-
-      {/* Address */}
-      <TextInput
-        placeholder="Full Address"
-        value={address}
-        onChangeText={setAddress}
-        multiline
-        style={styles.inputBox}
-      />
-
-      {/* Pincode */}
-      <TextInput
-        placeholder="Pincode"
-        value={pincode}
-        onChangeText={setPincode}
-        keyboardType="number-pad"
-        style={styles.inputBox}
-      />
-
-      {/* Phone */}
-      <TextInput
-        placeholder="Phone"
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-        style={styles.inputBox}
-      />
-
-      {/* Instructions */}
-      <TextInput
-        placeholder="Delivery instructions (optional)"
-        value={instructions}
-        onChangeText={setInstructions}
-        multiline
-        style={styles.inputBox}
-      />
-
-      {/* Default Address Checkbox */}
-      <Button
-        variant="ghost"
-        style={styles.checkboxRow}
-        onPress={() => {
-          if (totalAddresses === 1) return;
-          setIsDefault(!isDefault);
-        }}
+    <View style={styles.wrapper}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
       >
-        <>
-          <View
-            style={[
-              styles.checkbox,
-              isDefault && styles.checkboxChecked,
-              totalAddresses === 1 && { opacity: 0.5 },
-            ]}
-          />
-          <Text style={styles.checkboxLabel}>Set as default address</Text>
-        </>
-      </Button>
+        {/* LABEL PICKER */}
+        <Card style={{ marginBottom: spacing.lg }}>
+          <FormRow label="Label">
+            <View style={styles.pickerBox}>
+              <Picker selectedValue={label} onValueChange={(v) => setLabel(v)}>
+                <Picker.Item label="Home" value="home" />
+                <Picker.Item label="Office" value="office" />
+                <Picker.Item label="Other" value="other" />
+              </Picker>
+            </View>
+          </FormRow>
+        </Card>
 
-      {/* Save Button */}
-      <Button block onPress={save} loading={saving} disabled={saving}>
-        Save Changes
-      </Button>
-    </ScrollView>
+        {/* ADDRESS FIELDS */}
+        <Card style={{ marginBottom: spacing.lg }}>
+          <Input
+            label="Full Address"
+            placeholder="House no, street, area"
+            value={address}
+            onChangeText={setAddress}
+            multiline
+            style={{ marginBottom: spacing.md }}
+          />
+
+          <FormRow label="Pincode" style={{ marginBottom: spacing.md }}>
+            <Input
+              placeholder="e.g. 560001"
+              value={pincode}
+              onChangeText={setPincode}
+              keyboardType="number-pad"
+            />
+          </FormRow>
+
+          <FormRow label="Phone" style={{ marginBottom: spacing.md }}>
+            <Input
+              placeholder="e.g. 9876543210"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
+          </FormRow>
+
+          <Input
+            label="Delivery Instructions (optional)"
+            placeholder="Any notes for the rider"
+            value={instructions}
+            onChangeText={setInstructions}
+            multiline
+          />
+        </Card>
+
+        {/* DEFAULT ADDRESS TOGGLE */}
+        <Card style={{ marginBottom: spacing.lg }}>
+          <ListTile
+            title="Set as default address"
+            right={
+              <Switch
+                value={isDefault}
+                onChange={(v) => {
+                  if (totalAddresses === 1) return; // cannot unset single address
+                  setIsDefault(v);
+                }}
+                disabled={totalAddresses === 1}
+              />
+            }
+          />
+          {totalAddresses === 1 ? (
+            <Text style={styles.note}>
+              You must have at least one address. This address stays default.
+            </Text>
+          ) : null}
+        </Card>
+      </ScrollView>
+
+      {/* Sticky Footer CTA */}
+      <SafeAreaView edges={["bottom"]} style={styles.footerSafeArea}>
+        <View style={styles.footerInner}>
+          <Button
+            block
+            onPress={save}
+            loading={saving}
+            disabled={!isDirty || saving}
+          >
+            Save Changes
+          </Button>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 // 🎨 STYLES ---------------------------------------------------------
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: "#F5F5F5",
+    flex: 1,
+    backgroundColor: colors.screenBG,
   },
-
-  header: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 16,
+  content: {
+    padding: spacing.lg,
   },
-
   pickerBox: {
-    backgroundColor: "#FFF",
     borderWidth: 1,
-    borderColor: "#DDD",
+    borderColor: colors.border,
     borderRadius: 10,
-    marginBottom: 12,
+    overflow: "hidden",
   },
-
-  inputBox: {
-    backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#DDD",
-    fontSize: 16,
-    marginBottom: 12,
+  note: {
+    fontSize: textSizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
   },
-
-  checkboxRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    justifyContent: "flex-start",
-  },
-
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderWidth: 2,
-    borderColor: "#333",
-    borderRadius: 4,
-    marginRight: 10,
-  },
-
-  checkboxChecked: {
-    backgroundColor: "#000",
-  },
-
-  checkboxLabel: {
-    fontSize: 16,
-    color: "#333",
-  },
-
   center: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    paddingTop: 80,
+    paddingTop: spacing.xl,
+    backgroundColor: colors.screenBG,
+  },
+  wrapper: {
+    flex: 1,
+    backgroundColor: colors.screenBG,
+  },
+  footerSafeArea: {
+    backgroundColor: colors.cardBG,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  footerInner: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.cardBG,
   },
 });

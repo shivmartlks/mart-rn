@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, spacing, textSizes } from "../../theme";
+import { colors, fontWeights, spacing, textSizes } from "../../theme";
 
 export default function FormRow({
   label,
@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: textSizes.sm,
-    fontWeight: "500",
+    fontWeight: fontWeights.medium,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },

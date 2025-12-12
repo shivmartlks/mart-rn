@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { colors, textSizes, spacing, radii } from "../../theme";
+import { colors, textSizes, spacing, radii, fontWeights } from "../../theme";
 
 export default function Chip({
   label,
@@ -83,6 +83,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start", // auto width based on content
   },
   label: {
-    fontWeight: "500",
+    fontWeight: fontWeights.medium,
   },
 });

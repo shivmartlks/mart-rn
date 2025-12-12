@@ -37,37 +37,39 @@ export default function Modal({
       </TouchableWithoutFeedback>
 
       {/* Centered Modal */}
-      <View style={[styles.modalContainer, style]}>
-        {/* Title */}
-        {title ? <Text style={styles.title}>{title}</Text> : null}
+      <View style={styles.centerWrap}>
+        <View style={[styles.modalContainer, style]}>
+          {/* Title */}
+          {title ? <Text style={styles.title}>{title}</Text> : null}
 
-        {/* Message */}
-        {message ? <Text style={styles.message}>{message}</Text> : null}
+          {/* Message */}
+          {message ? <Text style={styles.message}>{message}</Text> : null}
 
-        {/* Custom content */}
-        {children}
+          {/* Custom content */}
+          {children}
 
-        {/* Buttons */}
-        {showButtons && (
-          <View style={styles.buttonGroup}>
-            {secondaryText ? (
-              <Button
-                block
-                variant="secondary"
-                style={{ marginBottom: spacing.sm }}
-                onPress={onSecondary}
-              >
-                {secondaryText}
-              </Button>
-            ) : null}
+          {/* Buttons */}
+          {showButtons && (
+            <View style={styles.buttonGroup}>
+              {secondaryText ? (
+                <Button
+                  block
+                  variant="secondary"
+                  style={{ marginBottom: spacing.sm }}
+                  onPress={onSecondary}
+                >
+                  {secondaryText}
+                </Button>
+              ) : null}
 
-            {primaryText ? (
-              <Button block onPress={onPrimary}>
-                {primaryText}
-              </Button>
-            ) : null}
-          </View>
-        )}
+              {primaryText ? (
+                <Button block onPress={onPrimary}>
+                  {primaryText}
+                </Button>
+              ) : null}
+            </View>
+          )}
+        </View>
       </View>
     </RNModal>
   );
@@ -79,10 +81,17 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.3)",
   },
 
-  modalContainer: {
+  centerWrap: {
     position: "absolute",
-    top: "30%",
-    alignSelf: "center",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  modalContainer: {
     width: "82%",
     backgroundColor: colors.cardBG,
     padding: spacing.xl,

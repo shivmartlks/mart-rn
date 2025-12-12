@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     marginTop: 6,
     color: "#2563EB",
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: fontWeights.medium,
   },
 
   center: {

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, radii, textSizes } from "../../theme";
+import { colors, fontWeights, radii, textSizes } from "../../theme";
 
 export default function Badge({
   label,
@@ -102,6 +102,6 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start", // keeps badge sized to content
   },
   text: {
-    fontWeight: "500",
+    fontWeight: fontWeights.medium,
   },
 });
