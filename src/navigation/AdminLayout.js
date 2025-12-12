@@ -2,6 +2,8 @@ import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Feather from "react-native-vector-icons/Feather";
 import Header from "../components/Header";
+import Footer from "../components/Footer";
+import { colors } from "../theme";
 
 // ADMIN SCREENS
 import AdminDashboard from "../screens/admin/AdminDashboard";
@@ -17,6 +19,14 @@ export default function AdminLayout() {
       screenOptions={({ route }) => ({
         header: () => <Header title={route.name} />,
         headerShown: true,
+
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarStyle: {
+          backgroundColor: colors.cardBG,
+          borderTopColor: colors.border,
+          borderTopWidth: 1,
+        },
 
         tabBarIcon: ({ color, size }) => {
           let icon = "home";
@@ -37,8 +47,9 @@ export default function AdminLayout() {
           }
 
           return <Feather name={icon} size={size} color={color} />;
-        }
+        },
       })}
+      tabBar={(props) => <Footer role="admin" />}
     >
       <Tab.Screen name="Dashboard" component={AdminDashboard} />
       <Tab.Screen name="Products" component={ManageProducts} />

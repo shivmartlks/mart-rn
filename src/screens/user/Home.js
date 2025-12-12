@@ -102,9 +102,15 @@ export default function Home() {
       <Card variant="muted">
         <Text>djskjdk</Text>
       </Card>
-      <Card variant="success">Deposit Completed</Card>
-      <Card variant="danger">Payment Failed</Card>
-      <Card variant="warning">Pending Confirmation</Card>
+      <Card variant="success">
+        <Text>Deposit Completed</Text>
+      </Card>
+      <Card variant="danger">
+        <Text>Payment Failed</Text>
+      </Card>
+      <Card variant="warning">
+        <Text>Pending Confirmation</Text>
+      </Card>
       <Card style={{ marginBottom: 16 }}>
         <Text>djskjdk</Text>
       </Card>
