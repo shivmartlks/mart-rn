@@ -2,7 +2,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import UserLayout from "./UserLayout";
 import Header from "../components/Header";
 
-import ProductView from "../screens/user/ProductView";
+import Products from "../screens/user/Products";
 import EditProfile from "../screens/shared/EditProfile";
 import ManageAddresses from "../screens/user/ManageAddresses";
 import AddAddress from "../screens/user/AddAddress";
@@ -26,8 +26,8 @@ export default function UserStack() {
 
       {/* DETAIL PAGES WITH BACK HEADER */}
       <Stack.Screen
-        name="ProductView"
-        component={ProductView}
+        name="Products"
+        component={Products}
         options={({ route }) => ({
           header: () => (
             <Header title={route?.params?.name ?? "Product"} showBack />

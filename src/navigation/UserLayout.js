@@ -5,7 +5,7 @@ import Footer from "../components/Footer";
 import { colors } from "../theme";
 
 import Home from "../screens/user/Home"; // Updated import to Home
-import Shop from "../screens/user/Shop";
+import Categories from "../screens/user/Categories";
 import Cart from "../screens/user/Cart";
 import Profile from "../screens/shared/Profile";
 
@@ -52,7 +52,7 @@ export default function UserLayout() {
       tabBar={(props) => <Footer role="user" {...props} />}
     >
       <Tab.Screen name="Home" component={Home} />
-      <Tab.Screen name="Categories" component={Shop} />
+      <Tab.Screen name="Categories" component={Categories} />
       <Tab.Screen name="Cart" component={Cart} />
       <Tab.Screen name="Profile" component={Profile} />
     </Tab.Navigator>

@@ -1,4 +1,3 @@
-// src/screens/ProductView.js
 import { useEffect, useState } from "react";
 import {
   View,
@@ -26,7 +25,7 @@ import QuantitySelector from "../../components/ui/QuantitySelector";
 // Theme tokens
 import { colors, spacing, textSizes, radii, fontWeights } from "../../theme";
 
-export default function ProductView() {
+export default function Products() {
   const navigation = useNavigation();
   const route = useRoute();
   const { user } = useAuth();
