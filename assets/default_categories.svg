@@ -1,0 +1,12 @@
+<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Soft background -->
+  <rect x="20" y="20" width="200" height="200" rx="20" fill="#F1F1F1"/>
+
+  <!-- Category grid -->
+  <rect x="70" y="70" width="40" height="40" rx="8" fill="#EDEDED"/>
+  <rect x="130" y="70" width="40" height="40" rx="8" fill="#EDEDED"/>
+  <rect x="70" y="130" width="40" height="40" rx="8" fill="#EDEDED"/>
+  <rect x="130" y="130" width="40" height="40" rx="8" fill="#EDEDED"/>
+
+</svg>

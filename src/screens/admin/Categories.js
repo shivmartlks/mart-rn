@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
-  Pressable,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
@@ -12,6 +10,9 @@ import {
 import { supabase } from "../../services/supabase";
 import { fetchCategories } from "../../services/adminApi";
 import Button from "../../components/ui/Button";
+import { colors, spacing, textSizes, fontWeights } from "../../theme";
+import Card from "../../components/ui/Card";
+import Input from "../../components/ui/Input";
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
@@ -52,39 +53,80 @@ export default function Categories() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Add New Category</Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.screenBG }}
+      contentContainerStyle={{ padding: spacing.lg }}
+    >
+      <Text
+        style={{
+          fontSize: textSizes.lg,
+          fontWeight: fontWeights.bold,
+          color: colors.textPrimary,
+          marginBottom: spacing.md,
+        }}
+      >
+        Add New Category
+      </Text>
 
       {/* Add Category Box */}
-      <View style={styles.card}>
-        <TextInput
+      <Card style={{ marginBottom: spacing.lg }}>
+        <Input
           placeholder="Category Name"
           value={newCategory}
           onChangeText={setNewCategory}
-          style={styles.input}
+          size="md"
+          style={{ marginBottom: spacing.md }}
         />
-
         <Button block onPress={handleAddCategory}>
           Add Category
         </Button>
-      </View>
+      </Card>
 
       {/* Category List */}
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>Existing Categories</Text>
-
+      <Card>
+        <Text
+          style={{
+            fontSize: textSizes.md,
+            fontWeight: fontWeights.semibold,
+            color: colors.textPrimary,
+            marginBottom: spacing.sm,
+          }}
+        >
+          Existing Categories
+        </Text>
         {loading ? (
-          <ActivityIndicator size="small" style={{ marginTop: 10 }} />
+          <ActivityIndicator
+            size="small"
+            color={colors.primary}
+            style={{ marginTop: spacing.sm }}
+          />
         ) : categories.length === 0 ? (
-          <Text style={styles.emptyText}>No categories yet.</Text>
+          <View style={{ alignItems: "center", paddingVertical: spacing.lg }}>
+            <Text
+              style={{ color: colors.textSecondary, fontSize: textSizes.sm }}
+            >
+              No categories yet.
+            </Text>
+          </View>
         ) : (
           categories.map((c) => (
-            <View key={c.id} style={styles.listItem}>
-              <Text style={styles.listText}>{c.name}</Text>
+            <View
+              key={c.id}
+              style={{
+                paddingVertical: spacing.sm,
+                borderBottomWidth: 1,
+                borderColor: colors.divider,
+              }}
+            >
+              <Text
+                style={{ fontSize: textSizes.md, color: colors.textPrimary }}
+              >
+                {c.name}
+              </Text>
             </View>
           ))
         )}
-      </View>
+      </Card>
     </ScrollView>
   );
 }
@@ -93,62 +135,5 @@ export default function Categories() {
 // STYLES
 // ----------------------------------------------------
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: "#F5F5F5",
-  },
-
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-
-  card: {
-    backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { height: 3 },
-  },
-
-  input: {
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-
-  subtitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-
-  emptyText: {
-    color: "#888",
-    marginTop: 5,
-  },
-
-  listItem: {
-    backgroundColor: "#F7F7F7",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    marginBottom: 8,
-  },
-
-  listText: {
-    fontSize: 16,
-    color: "#333",
-  },
+  // ...remove hardcoded styles; using theme components above...
 });

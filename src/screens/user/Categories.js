@@ -14,6 +14,7 @@ import SectionTitle from "../../components/ui/SectionTitle";
 import Chip from "../../components/ui/Chip";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import { IMAGES } from "../../const/imageConst";
+import DefaultCategories from "../../../assets/default_categories.svg";
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
@@ -42,9 +43,6 @@ export default function Categories() {
       sub.image_url &&
       typeof sub.image_url === "string" &&
       sub.image_url.startsWith("http");
-    const imgSource = isValidImage
-      ? { uri: encodeURI(sub.image_url) }
-      : IMAGES.default;
     return (
       <Pressable
         key={sub.id}
@@ -54,7 +52,15 @@ export default function Categories() {
         style={styles.subItem}
       >
         <View style={styles.imageContainer}>
-          <Image source={imgSource} style={styles.image} resizeMode="cover" />
+          {isValidImage ? (
+            <Image
+              source={{ uri: encodeURI(sub.image_url) }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          ) : (
+            <DefaultCategories width={56} height={56} />
+          )}
         </View>
         <Text style={styles.subName}>{sub.name}</Text>
       </Pressable>

@@ -1,0 +1,18 @@
+<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Soft background -->
+  <rect x="20" y="20" width="200" height="200" rx="20" fill="#F1F1F1"/>
+
+  <!-- Product box -->
+  <rect x="70" y="80" width="100" height="80" rx="12"
+        fill="#EDEDED" stroke="#111111" stroke-width="2"/>
+
+  <!-- Box top line -->
+  <line x1="70" y1="100" x2="170" y2="100"
+        stroke="#999999" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Subtle lines -->
+  <line x1="90" y1="140" x2="150" y2="140"
+        stroke="#C4C4C4" stroke-width="3" stroke-linecap="round"/>
+
+</svg>

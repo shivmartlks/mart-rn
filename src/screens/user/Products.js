@@ -21,6 +21,7 @@ import { IMAGES } from "../../const/imageConst";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
 import QuantitySelector from "../../components/ui/QuantitySelector";
+import DefaultProduct from "../../../assets/default_product.svg";
 
 // Theme tokens
 import { colors, spacing, textSizes, radii, fontWeights } from "../../theme";
@@ -161,10 +162,17 @@ export default function Products() {
         ]}
       >
         <View style={styles.imageWrapper}>
-          <Image
-            source={isValidImage ? { uri: p.image_url } : IMAGES.default}
-            style={styles.productImage}
-          />
+          {isValidImage ? (
+            <Image
+              source={{ uri: p.image_url }}
+              style={styles.productImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={styles.imageFallbackCenter}>
+              <DefaultProduct width={120} height={120} />
+            </View>
+          )}
 
           {/* Out of Stock Label */}
           {isOutOfStock && (
@@ -277,7 +285,11 @@ export default function Products() {
               renderItem={renderProduct}
               keyExtractor={(item) => item.id.toString()}
               numColumns={2}
-              contentContainerStyle={{ paddingHorizontal: spacing.sm }}
+              scrollEnabled={true}
+              contentContainerStyle={{
+                paddingHorizontal: spacing.sm,
+                paddingBottom: spacing.xl,
+              }}
               columnWrapperStyle={{
                 justifyContent: "space-between",
                 marginBottom: spacing.sm,
@@ -377,28 +389,40 @@ const styles = StyleSheet.create({
   },
 
   productCard: {
-    flex: 1,
     backgroundColor: colors.cardSoft,
     padding: spacing.sm,
     borderRadius: radii.md,
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: spacing.sm,
+    flexBasis: "48%",
     maxWidth: "48%",
   },
 
   imageWrapper: {
     position: "relative",
     marginBottom: spacing.sm,
-    borderRadius: radii.md,
+    borderRadius: 12,
     overflow: "hidden",
+    padding: spacing.sm,
+    backgroundColor: colors.white200,
+    borderWidth: 0,
+    justifyContent: "center",
+    alignItems: "center",
+    height: 120,
+    width: "100%",
+  },
+
+  imageFallbackCenter: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   productImage: {
     width: "100%",
-    aspectRatio: 1,
-    marginBottom: spacing.xs,
-    backgroundColor: colors.gray100,
+    height: "100%",
   },
 
   floatingControl: {
