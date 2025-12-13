@@ -20,6 +20,7 @@ import { IMAGES } from "../../const/imageConst";
 import { addToCart, removeFromCart } from "../../services/cartService";
 import Toast from "react-native-toast-message";
 import { placeOrder } from "../../services/placeOrder";
+import CartEmptySvg from "../../../assets/cart_empty.svg";
 
 // Theme tokens (use your theme module)
 import { colors, spacing, textSizes, fontWeights, radii } from "../../theme";
@@ -125,20 +126,44 @@ export default function Cart() {
     return (
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.screenBG }}
-        contentContainerStyle={{ padding: spacing.lg }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: spacing.lg,
+        }}
       >
-        <Card elevated style={{ padding: spacing.lg, alignItems: "center" }}>
-          <Text style={{ fontSize: textSizes.lg, color: colors.textPrimary }}>
-            Your cart is empty.
-          </Text>
-
-          <Button
-            style={{ marginTop: spacing.md }}
-            onPress={() => navigation.navigate("Shop")}
-          >
-            Browse Products
-          </Button>
-        </Card>
+        <CartEmptySvg width={160} height={160} />
+        <Text
+          style={{
+            fontSize: textSizes.lg,
+            color: colors.textPrimary,
+            marginTop: spacing.md,
+            marginBottom: spacing.xs,
+            fontWeight: fontWeights.bold,
+            textAlign: "center",
+          }}
+        >
+          Your cart is empty
+        </Text>
+        <Text
+          style={{
+            fontSize: textSizes.md,
+            color: colors.textSecondary,
+            textAlign: "center",
+            marginBottom: spacing.md,
+          }}
+        >
+          Browse products and add items to your cart.
+        </Text>
+        <Button
+          size="sm"
+          onPress={() =>
+            navigation.navigate("UserTabs", { screen: "Categories" })
+          }
+        >
+          Browse Categories
+        </Button>
       </ScrollView>
     );
 

@@ -52,13 +52,48 @@ export default function Orders() {
   return (
     <View style={styles.wrapper}>
       {orders.length === 0 ? (
-        <View style={styles.emptyWrap}>
+        // Centered empty state like Wishlist
+        <ScrollView
+          style={{ flex: 1, backgroundColor: colors.screenBG }}
+          contentContainerStyle={{
+            flexGrow: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: spacing.lg,
+          }}
+        >
           <OrdersEmptySvg width={160} height={160} />
-          <Text style={styles.emptyTitle}>No orders yet</Text>
-          <Text style={styles.emptySub}>
+          <Text
+            style={{
+              fontSize: textSizes.lg,
+              color: colors.textPrimary,
+              marginTop: spacing.md,
+              marginBottom: spacing.xs,
+              fontWeight: "700",
+              textAlign: "center",
+            }}
+          >
+            No orders yet
+          </Text>
+          <Text
+            style={{
+              fontSize: textSizes.md,
+              color: colors.textSecondary,
+              textAlign: "center",
+              marginBottom: spacing.md,
+            }}
+          >
             Place your first order to see it here.
           </Text>
-        </View>
+          <Button
+            size="sm"
+            onPress={() =>
+              navigation.navigate("UserTabs", { screen: "Categories" })
+            }
+          >
+            Browse Categories
+          </Button>
+        </ScrollView>
       ) : (
         <ScrollView style={styles.container}>
           <Text style={styles.header}>My Orders</Text>
@@ -95,20 +130,6 @@ export default function Orders() {
           ))}
         </ScrollView>
       )}
-
-      {/* Sticky Footer CTA */}
-      <SafeAreaView edges={["bottom"]} style={styles.footerSafeArea}>
-        <View style={styles.footerInner}>
-          <Button
-            block
-            onPress={() =>
-              navigation.navigate("UserTabs", { screen: "Categories" })
-            }
-          >
-            Browse Categories
-          </Button>
-        </View>
-      </SafeAreaView>
     </View>
   );
 }

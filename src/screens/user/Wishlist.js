@@ -13,6 +13,11 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import { IMAGES } from "../../const/imageConst";
 import Button from "../../components/ui/Button";
+import { colors, spacing, textSizes, fontWeights } from "../../theme";
+import Card from "../../components/ui/Card";
+import Divider from "../../components/ui/Divider";
+import { SafeAreaView } from "react-native-safe-area-context";
+import WishlistEmptySvg from "../../../assets/wishlist_empty.svg";
 
 // =====================================================
 // MAIN WISHLIST SCREEN
@@ -113,199 +118,181 @@ export default function Wishlist() {
   // -----------------------------------------------------
   if (!loading && items.length === 0)
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>Your wishlist is empty.</Text>
-        <Button
-          onPress={() => navigation.navigate("UserTabs", { screen: "Cart" })}
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.screenBG }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: spacing.lg,
+        }}
+      >
+        <WishlistEmptySvg width={160} height={160} />
+        <Text
+          style={{
+            fontSize: textSizes.lg,
+            color: colors.textPrimary,
+            marginTop: spacing.md,
+            marginBottom: spacing.xs,
+            fontWeight: fontWeights.bold,
+            textAlign: "center",
+          }}
         >
-          Browse Products
+          Your wishlist is empty
+        </Text>
+        <Text
+          style={{
+            fontSize: textSizes.md,
+            color: colors.textSecondary,
+            textAlign: "center",
+            marginBottom: spacing.md,
+          }}
+        >
+          Browse products and add items to your wishlist.
+        </Text>
+        <Button
+          size="sm"
+          onPress={() =>
+            navigation.navigate("UserTabs", { screen: "Categories" })
+          }
+        >
+          Browse Categories
         </Button>
-      </View>
+      </ScrollView>
     );
 
   // -----------------------------------------------------
   // MAIN UI
   // -----------------------------------------------------
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.pageTitle}>Wishlist</Text>
+    <View style={{ flex: 1, backgroundColor: colors.screenBG }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: spacing.lg }}
+      >
+        {/* List of wishlist items */}
+        {items.map((i) => {
+          const p = i.products;
+          const isValidImage =
+            p.image_url &&
+            typeof p.image_url === "string" &&
+            p.image_url.startsWith("http");
+          const mrp = p.mrp || p.price;
+          const discount = Math.round(((mrp - p.price) / mrp) * 100);
 
-      {items.map((i) => {
-        const p = i.products;
+          return (
+            <Card key={i.id} style={{ marginBottom: spacing.md }}>
+              <Pressable
+                onPress={() =>
+                  navigation.navigate("ProductDetails", { product: p })
+                }
+                style={{ flexDirection: "row" }}
+              >
+                {/* IMAGE */}
+                <Image
+                  source={isValidImage ? { uri: p.image_url } : IMAGES.default}
+                  style={{
+                    width: 70,
+                    height: 70,
+                    marginRight: 12,
+                    borderRadius: 10,
+                    backgroundColor: colors.white100,
+                  }}
+                />
 
-        const isValidImage =
-          p.image_url &&
-          typeof p.image_url === "string" &&
-          p.image_url.startsWith("http");
+                {/* INFO */}
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: textSizes.md,
+                      fontWeight: fontWeights.semibold,
+                      color: colors.textPrimary,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {p.name}
+                  </Text>
+                  <Text
+                    style={{
+                      color: colors.textSecondary,
+                      fontSize: textSizes.xs,
+                      marginTop: 2,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {p.short_desc || ""}
+                  </Text>
 
-        const mrp = p.mrp || p.price;
-        const discount = Math.round(((mrp - p.price) / mrp) * 100);
+                  {/* PRICE */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginTop: 6,
+                      gap: 6,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: textSizes.md,
+                        fontWeight: fontWeights.bold,
+                        color: colors.textPrimary,
+                      }}
+                    >
+                      ₹{p.price}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: textSizes.xs,
+                        color: colors.textSecondary,
+                        textDecorationLine: "line-through",
+                      }}
+                    >
+                      ₹{mrp}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: textSizes.xs,
+                        color: colors.success,
+                        fontWeight: fontWeights.semibold,
+                      }}
+                    >
+                      {discount}% OFF
+                    </Text>
+                  </View>
 
-        return (
-          <Pressable
-            key={i.id}
-            style={styles.item}
-            onPress={() =>
-              navigation.navigate("ProductDetails", { product: p })
-            }
-          >
-            {/* IMAGE */}
-            <Image
-              source={isValidImage ? { uri: p.image_url } : IMAGES.default}
-              style={styles.productImage}
-            />
+                  {/* ACTION BUTTONS */}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      marginTop: spacing.sm,
+                      gap: 10,
+                    }}
+                  >
+                    <Button
+                      size="sm"
+                      onPress={() => addItemToCart(p.id, i.id)}
+                      style={{ flex: 1 }}
+                    >
+                      Add to Cart
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onPress={() => removeItem(i.id)}
+                      style={{ flex: 1 }}
+                    >
+                      Remove
+                    </Button>
+                  </View>
+                </View>
+              </Pressable>
+            </Card>
+          );
+        })}
 
-            {/* INFO */}
-            <View style={{ flex: 1 }}>
-              <Text style={styles.productName}>{p.name}</Text>
-
-              <Text style={styles.shortDesc} numberOfLines={1}>
-                {p.short_desc || ""}
-              </Text>
-
-              {/* PRICE */}
-              <View style={styles.priceRow}>
-                <Text style={styles.price}>₹{p.price}</Text>
-                <Text style={styles.mrp}>₹{mrp}</Text>
-                <Text style={styles.discount}>{discount}% OFF</Text>
-              </View>
-
-              {/* ACTION BUTTONS */}
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  onPress={() => addItemToCart(p.id, i.id)}
-                  style={styles.addBtn}
-                >
-                  <Text style={styles.addBtnText}>ADD TO CART</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => removeItem(i.id)}
-                  style={styles.removeBtn}
-                >
-                  <Text style={styles.removeBtnText}>Remove</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Pressable>
-        );
-      })}
-
-      <View style={{ height: 50 }} />
-    </ScrollView>
+        <View style={{ height: spacing.xl }} />
+      </ScrollView>
+    </View>
   );
 }
-
-// =====================================================
-// STYLES
-// =====================================================
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: "#F9F9F9",
-  },
-
-  pageTitle: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-
-  item: {
-    flexDirection: "row",
-    backgroundColor: "#FFF",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#EEE",
-    marginBottom: 12,
-  },
-
-  productImage: {
-    width: 70,
-    height: 70,
-    marginRight: 12,
-    borderRadius: 10,
-    backgroundColor: "#F0F0F0",
-  },
-
-  productName: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-
-  shortDesc: {
-    color: "#777",
-    fontSize: 12,
-    marginTop: 2,
-  },
-
-  priceRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 6,
-    gap: 6,
-  },
-
-  price: {
-    fontSize: 16,
-    fontWeight: "700",
-  },
-
-  mrp: {
-    fontSize: 13,
-    color: "#777",
-    textDecorationLine: "line-through",
-  },
-
-  discount: {
-    fontSize: 13,
-    color: "green",
-    fontWeight: "600",
-  },
-
-  actionRow: {
-    flexDirection: "row",
-    marginTop: 10,
-    gap: 10,
-  },
-
-  addBtn: {
-    backgroundColor: "#1daf80",
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-  },
-
-  addBtnText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-
-  removeBtn: {
-    backgroundColor: "#F4F4F4",
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-
-  removeBtnText: {
-    color: "#E91E63",
-    fontWeight: "600",
-    fontSize: 13,
-  },
-
-  emptyContainer: {
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  emptyText: {
-    fontSize: 18,
-    marginBottom: 14,
-  },
-});

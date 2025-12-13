@@ -227,7 +227,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: spacing.xl,
+    paddingVertical: 0,
+    paddingHorizontal: spacing.lg,
   },
   emptyImage: {
     width: 160,
