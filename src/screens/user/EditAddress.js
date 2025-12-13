@@ -6,7 +6,6 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,6 +17,8 @@ import Input from "../../components/ui/Input";
 import FormRow from "../../components/ui/FormRow";
 import ListTile from "../../components/ui/ListTile";
 import Switch from "../../components/ui/Switch";
+import Chip from "../../components/ui/Chip";
+import { Feather } from "@expo/vector-icons";
 import { colors, spacing, textSizes } from "../../theme";
 
 export default function EditAddress() {
@@ -34,6 +35,7 @@ export default function EditAddress() {
   const [totalAddresses, setTotalAddresses] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({ address: "", pincode: "", phone: "" });
   const [original, setOriginal] = useState({
     label: "home",
     address: "",
@@ -90,6 +92,17 @@ export default function EditAddress() {
     setLoading(false);
   }
 
+  function validateFields() {
+    const next = { address: "", pincode: "", phone: "" };
+    if (!address.trim()) next.address = "Full Address is required";
+    if (!pincode.trim()) next.pincode = "Pincode is required";
+    else if (pincode.length !== 6) next.pincode = "Pincode must be 6 digits";
+    if (!phone.trim()) next.phone = "Phone number is required";
+    else if (phone.length < 10) next.phone = "Enter a valid phone number";
+    setErrors(next);
+    return !next.address && !next.pincode && !next.phone;
+  }
+
   // derived dirty flag
   const isDirty =
     label !== original.label ||
@@ -102,6 +115,7 @@ export default function EditAddress() {
   async function save() {
     // guard: avoid unnecessary calls
     if (!isDirty) return;
+    if (!validateFields()) return;
     setSaving(true);
     try {
       const { error } = await supabase
@@ -118,11 +132,10 @@ export default function EditAddress() {
 
       if (error) throw error;
 
-      // success toast instead of alert
       showSuccess("Address updated", "Your changes have been saved.");
       navigation.navigate("ManageAddresses");
     } catch (err) {
-      alert(err.message || "Failed to update address.");
+      // keep inline errors, avoid alerts
     } finally {
       setSaving(false);
     }
@@ -145,15 +158,52 @@ export default function EditAddress() {
         style={styles.container}
         contentContainerStyle={styles.content}
       >
-        {/* LABEL PICKER */}
+        {/* LABEL SELECTION VIA CHIPS WITH ICONS (HOME/OFFICE/OTHER) */}
         <Card style={{ marginBottom: spacing.lg }}>
           <FormRow label="Label">
-            <View style={styles.pickerBox}>
-              <Picker selectedValue={label} onValueChange={(v) => setLabel(v)}>
-                <Picker.Item label="Home" value="home" />
-                <Picker.Item label="Office" value="office" />
-                <Picker.Item label="Other" value="other" />
-              </Picker>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <Chip
+                label="Home"
+                selected={label === "home"}
+                leftIcon={
+                  <Feather
+                    name="home"
+                    size={16}
+                    color={
+                      label === "home" ? colors.primary : colors.textSecondary
+                    }
+                  />
+                }
+                onPress={() => setLabel("home")}
+              />
+              <Chip
+                label="Office"
+                selected={label === "office"}
+                leftIcon={
+                  <Feather
+                    name="briefcase"
+                    size={16}
+                    color={
+                      label === "office" ? colors.primary : colors.textSecondary
+                    }
+                  />
+                }
+                onPress={() => setLabel("office")}
+              />
+              <Chip
+                label="Other"
+                selected={label === "other"}
+                leftIcon={
+                  <Feather
+                    name="map-pin"
+                    size={16}
+                    color={
+                      label === "other" ? colors.primary : colors.textSecondary
+                    }
+                  />
+                }
+                onPress={() => setLabel("other")}
+              />
             </View>
           </FormRow>
         </Card>
@@ -164,17 +214,26 @@ export default function EditAddress() {
             label="Full Address"
             placeholder="House no, street, area"
             value={address}
-            onChangeText={setAddress}
+            onChangeText={(v) => {
+              setAddress(v);
+              if (errors.address) setErrors({ ...errors, address: "" });
+            }}
             multiline
             style={{ marginBottom: spacing.md }}
+            error={errors.address}
           />
 
           <FormRow label="Pincode" style={{ marginBottom: spacing.md }}>
             <Input
               placeholder="e.g. 560001"
               value={pincode}
-              onChangeText={setPincode}
+              onChangeText={(v) => {
+                setPincode(v);
+                if (errors.pincode) setErrors({ ...errors, pincode: "" });
+              }}
               keyboardType="number-pad"
+              error={errors.pincode}
+              maxLength={6}
             />
           </FormRow>
 
@@ -182,8 +241,13 @@ export default function EditAddress() {
             <Input
               placeholder="e.g. 9876543210"
               value={phone}
-              onChangeText={setPhone}
+              onChangeText={(v) => {
+                setPhone(v);
+                if (errors.phone) setErrors({ ...errors, phone: "" });
+              }}
               keyboardType="phone-pad"
+              error={errors.phone}
+              maxLength={10}
             />
           </FormRow>
 

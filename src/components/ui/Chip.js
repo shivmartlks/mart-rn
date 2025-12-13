@@ -31,9 +31,9 @@ export default function Chip({
 
   const s = sizeMap[size];
 
-  const bgColor = selected ? colors.gray900 : colors.gray100;
-  const borderColor = selected ? colors.gray900 : colors.gray200;
-  const textColor = selected ? colors.white50 : colors.textPrimary;
+  const bgColor = selected ? colors.gray100 : colors.gray100;
+  const borderColor = selected ? colors.gray500 : colors.gray200;
+  const textColor = selected ? colors.gray900 : colors.gray500;
 
   const Wrapper = onPress ? TouchableOpacity : View;
 
@@ -48,7 +48,7 @@ export default function Chip({
           borderColor: borderColor,
           paddingVertical: s.paddingVertical,
           paddingHorizontal: s.paddingHorizontal,
-          borderRadius: radii.lg,
+          borderRadius: radii.full,
           height: s.height,
         },
         style,
