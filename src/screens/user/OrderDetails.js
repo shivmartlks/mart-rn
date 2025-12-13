@@ -11,6 +11,8 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import Card from "../../components/ui/Card";
 import Divider from "../../components/ui/Divider";
+import Badge from "../../components/ui/Badge";
+import { getStatusVariant } from "../../utils/orderUtils";
 
 export default function OrderDetails() {
   const navigation = useNavigation();
@@ -56,25 +58,63 @@ export default function OrderDetails() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: colors.screenBG }}
       contentContainerStyle={{ padding: spacing.lg }}
     >
-      {/* Back button removed: header already shows back */}
-
-      {/* Amount + Status */}
-      <Card style={{ marginBottom: spacing.lg }}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.amount}>₹{order.total_amount}</Text>
-          <View style={[styles.statusChip, statusBg(order.status)]}>
-            <Text style={[styles.statusText, statusFg(order.status)]}>
-              {String(order.status).toLowerCase()}
-            </Text>
-          </View>
+      {/* Top Summary Card, themed like Orders list */}
+      <View
+        style={{
+          backgroundColor: colors.cardBG,
+          padding: spacing.md,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: colors.border,
+          marginBottom: spacing.md,
+        }}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Text
+            style={{
+              fontSize: textSizes.md,
+              fontWeight: fontWeights.bold,
+              color: colors.textPrimary,
+            }}
+          >
+            ₹{order.total_amount}
+          </Text>
+          <Badge
+            label={order.status}
+            variant={getStatusVariant(order.status)}
+            size="md"
+          />
         </View>
-        <Text style={styles.date}>
-          Ordered on {new Date(order.created_at).toLocaleString()}
+        <Text
+          style={{
+            marginTop: spacing.xs,
+            color: colors.textSecondary,
+            fontSize: textSizes.sm,
+          }}
+        >
+          Placed on {new Date(order.created_at).toLocaleDateString()}
         </Text>
-      </Card>
+        {order.expected_delivery && (
+          <Text
+            style={{
+              marginTop: spacing.xs,
+              color: colors.textSecondary,
+              fontSize: textSizes.sm,
+            }}
+          >
+            ETA: {new Date(order.expected_delivery).toLocaleDateString()}
+          </Text>
+        )}
+      </View>
 
       {/* Address */}
       <Card style={{ marginBottom: spacing.lg }}>
@@ -110,32 +150,6 @@ export default function OrderDetails() {
       </Card>
     </ScrollView>
   );
-}
-
-// Theme-based status colors
-function statusBg(status) {
-  switch (String(status).toLowerCase()) {
-    case "delivered":
-      return { backgroundColor: colors.green100 };
-    case "pending":
-      return { backgroundColor: colors.orange100 };
-    case "cancelled":
-      return { backgroundColor: colors.red100 };
-    default:
-      return { backgroundColor: colors.softblue100 };
-  }
-}
-function statusFg(status) {
-  switch (String(status).toLowerCase()) {
-    case "delivered":
-      return { color: colors.green700 };
-    case "pending":
-      return { color: colors.orange700 };
-    case "cancelled":
-      return { color: colors.red700 };
-    default:
-      return { color: colors.gray800 };
-  }
 }
 
 // 🎨 STYLES ------------------------------

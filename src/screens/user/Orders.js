@@ -15,6 +15,8 @@ import { fontWeights } from "../../theme";
 import { colors, spacing, textSizes } from "../../theme";
 import OrdersEmptySvg from "../../../assets/orders_empty.svg";
 import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
+import { getStatusVariant } from "../../utils/orderUtils";
 
 export default function Orders() {
   const { user } = useAuth();
@@ -95,37 +97,63 @@ export default function Orders() {
           </Button>
         </ScrollView>
       ) : (
-        <ScrollView style={styles.container}>
-          <Text style={styles.header}>My Orders</Text>
-
+        <ScrollView
+          style={{ flex: 1, backgroundColor: colors.screenBG }}
+          contentContainerStyle={{ padding: spacing.lg }}
+        >
+          {/* Removed page heading; Header component already shows the title */}
           {orders.map((order) => (
             <Pressable
               key={order.id}
-              style={styles.orderCard}
+              style={{
+                backgroundColor: colors.cardBG,
+                padding: spacing.md,
+                marginBottom: spacing.md,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
               onPress={() =>
                 navigation.navigate("OrderDetails", { id: order.id })
               }
             >
-              {/* Amount + Status */}
               <View style={styles.rowBetween}>
-                <Text style={styles.amount}>₹{order.total_amount}</Text>
-
-                <View style={[styles.statusBadge, statusColor(order.status)]}>
-                  <Text
-                    style={[styles.statusText, statusTextColor(order.status)]}
-                  >
-                    {order.status}
-                  </Text>
-                </View>
+                <Text
+                  style={{
+                    fontSize: textSizes.md,
+                    fontWeight: fontWeights.bold,
+                    color: colors.textPrimary,
+                  }}
+                >
+                  ₹{order.total_amount}
+                </Text>
+                <Badge
+                  label={order.status}
+                  variant={getStatusVariant(order.status)}
+                  size="md"
+                />
               </View>
 
-              {/* Placed date */}
-              <Text style={styles.date}>
+              <Text
+                style={{
+                  marginTop: spacing.xs,
+                  color: colors.textSecondary,
+                  fontSize: textSizes.sm,
+                }}
+              >
                 Placed on {new Date(order.created_at).toLocaleDateString()}
               </Text>
 
-              {/* View Details */}
-              <Text style={styles.viewMore}>View Details →</Text>
+              <Text
+                style={{
+                  marginTop: spacing.xs,
+                  color: colors.primary,
+                  fontSize: textSizes.sm,
+                  fontWeight: fontWeights.medium,
+                }}
+              >
+                View Details →
+              </Text>
             </Pressable>
           ))}
         </ScrollView>
@@ -134,54 +162,18 @@ export default function Orders() {
   );
 }
 
-// 🔥 STATUS COLOR HELPERS
-function statusColor(status) {
-  switch (status) {
-    case "delivered":
-      return { backgroundColor: "#D1FAE5" };
-    case "pending":
-      return { backgroundColor: "#FFEDD5" };
-    case "cancelled":
-      return { backgroundColor: "#FEE2E2" };
-    default:
-      return { backgroundColor: "#DBEAFE" };
-  }
-}
-
-function statusTextColor(status) {
-  switch (status) {
-    case "delivered":
-      return { color: "#047857" };
-    case "pending":
-      return { color: "#C2410C" };
-    case "cancelled":
-      return { color: "#B91C1C" };
-    default:
-      return { color: "#1D4ED8" };
-  }
-}
-
 // 🎨 STYLES
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#F5F5F5",
+    // removed hardcoded padding/bg; using themed styles above
   },
 
   header: {
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: 20,
+    // removed page heading style
   },
 
   orderCard: {
-    backgroundColor: "#FFF",
-    padding: 16,
-    marginBottom: 14,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
+    // replaced with inline themed styles
   },
 
   rowBetween: {
@@ -193,18 +185,6 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 18,
     fontWeight: "700",
-  },
-
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-
-  statusText: {
-    fontSize: 12,
-    fontWeight: "600",
-    textTransform: "capitalize",
   },
 
   date: {
