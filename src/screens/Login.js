@@ -7,6 +7,7 @@ import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 
 import { spacing, colors, textSizes, fontWeights } from "../theme";
+import Logo from "../../assets/logo.svg";
 
 export default function Login({ navigation }) {
   const [email, setEmail] = useState("");
@@ -33,9 +34,11 @@ export default function Login({ navigation }) {
         flex: 1,
         justifyContent: "center",
         padding: spacing.xl,
-        backgroundColor: colors.background,
+        backgroundColor: colors.screenBG,
       }}
     >
+      {/* Removed top logo above the login card */}
+
       {/* Centered Card */}
       <Card
         elevated
@@ -47,17 +50,10 @@ export default function Login({ navigation }) {
           width: "100%",
         }}
       >
-        <Text
-          style={{
-            fontSize: textSizes.xl,
-            fontWeight: fontWeights.semibold,
-            textAlign: "center",
-            marginBottom: spacing.lg,
-            color: colors.text,
-          }}
-        >
-          Login to ShivMart
-        </Text>
+        {/* Replace heading text with logo */}
+        <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
+          <Logo width={200} height={52} color="#111111" />
+        </View>
 
         <Input
           placeholder="Email"
