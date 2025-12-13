@@ -67,7 +67,26 @@ export async function placeOrder(user, addressId, paymentMode = "cod") {
 
   if (itemsErr) throw itemsErr;
 
-  // 7️⃣ Clear cart
+  // 7️⃣ Decrement stock for each product using Postgres RPC (atomic)
+  for (const i of cartItems) {
+    const productId = i.product_id; // keep as-is (UUID/string)
+    const qty = Number(i.quantity);
+    if (!Number.isInteger(qty)) {
+      throw new Error("Invalid quantity type");
+    }
+    const { data: rpcResult, error: rpcErr } = await supabase.rpc(
+      "decrement_stock",
+      { product_id: productId, qty }
+    );
+    if (rpcErr) throw rpcErr;
+    if (!rpcResult || rpcResult.success === false) {
+      throw new Error(
+        rpcResult?.message || "Insufficient stock for one or more items"
+      );
+    }
+  }
+
+  // 8️⃣ Clear cart
   await supabase.from("cart_items").delete().eq("user_id", user.id);
 
   return order.id;
