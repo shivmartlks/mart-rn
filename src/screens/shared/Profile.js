@@ -8,6 +8,8 @@ import Avatar from "../../components/ui/Avatar";
 import Card from "../../components/ui/Card";
 import ListTile from "../../components/ui/ListTile";
 import Divider from "../../components/ui/Divider";
+import BottomSheet from "../../components/ui/BottomSheet";
+import Button from "../../components/ui/Button";
 
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 
@@ -17,6 +19,7 @@ export default function Profile() {
   const navigation = useNavigation();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   useEffect(() => {
     loadProfile();
@@ -29,9 +32,15 @@ export default function Profile() {
     setLoading(false);
   }
 
-  async function handleLogout() {
+  async function handleConfirmLogout() {
     await supabase.auth.signOut();
-    Alert.alert("Logged Out", "You have been logged out.");
+    setLogoutOpen(false);
+    // Optionally navigate to login or root
+    // navigation.navigate("AuthLoading");
+  }
+
+  function handleLogout() {
+    setLogoutOpen(true);
   }
 
   if (loading)
@@ -195,6 +204,34 @@ export default function Profile() {
           onPress={handleLogout}
         />
       </Card>
+
+      {/* Logout Confirmation Bottom Sheet */}
+      <BottomSheet
+        visible={logoutOpen}
+        onClose={() => setLogoutOpen(false)}
+        title="Logout"
+      >
+        <Text style={{ color: colors.textSecondary }}>
+          Are you sure you want to logout?
+        </Text>
+
+        <Button
+          block
+          variant="secondary"
+          style={{ marginTop: spacing.sm }}
+          onPress={() => setLogoutOpen(false)}
+        >
+          No, Stay Logged In
+        </Button>
+
+        <Button
+          block
+          style={{ marginTop: spacing.lg }}
+          onPress={handleConfirmLogout}
+        >
+          Yes, Logout
+        </Button>
+      </BottomSheet>
 
       {/* -------------------------------------------------- */}
       {/* VERSION FOOTER */}

@@ -7,6 +7,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import Modal from "../../components/ui/Modal";
+import BottomSheet from "../../components/ui/BottomSheet";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import { showSuccess } from "../../utils/toastUtils";
 import AddressEmpty from "../../../assets/address_empty.svg";
@@ -132,42 +133,34 @@ export default function ManageAddresses() {
         </View>
       </SafeAreaView>
 
-      {/* Delete confirmation modal */}
+      {/* Delete confirmation bottom sheet */}
       {confirmDeleteId !== null && (
-        <Modal
+        <BottomSheet
           visible
           title="Delete Address"
           onClose={() => setConfirmDeleteId(null)}
-          showButtons={false}
         >
-          <Text
-            style={{
-              color: colors.textSecondary,
-              fontSize: textSizes.md,
-              marginBottom: spacing.md,
-            }}
-          >
+          <Text style={{ color: colors.textSecondary, fontSize: textSizes.md }}>
             Are you sure you want to delete this address?
           </Text>
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ marginTop: spacing.md }}>
             <Button
+              block
               variant="secondary"
-              size="sm"
-              style={{ flex: 1 }}
               onPress={() => setConfirmDeleteId(null)}
             >
               No
             </Button>
             <Button
-              size="sm"
-              style={{ flex: 1 }}
+              block
+              style={{ marginTop: spacing.sm }}
               onPress={() => deleteAddress(confirmDeleteId)}
               loading={deleting}
             >
-              Yes
+              Yes, Delete
             </Button>
           </View>
-        </Modal>
+        </BottomSheet>
       )}
     </View>
   );
