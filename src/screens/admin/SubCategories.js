@@ -11,6 +11,7 @@ import {
 import { supabase } from "../../services/supabase";
 import { fetchCategories, fetchSubCategories } from "../../services/adminApi";
 import Button from "../../components/ui/Button";
+import Switch from "../../components/ui/Switch";
 
 export default function SubCategories() {
   const [categories, setCategories] = useState([]);
@@ -21,6 +22,7 @@ export default function SubCategories() {
     name: "",
     categoryId: "",
   });
+  const [visibleNew, setVisibleNew] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export default function SubCategories() {
       {
         name: newSubcategory.name,
         category_id: newSubcategory.categoryId,
+        user_visibility: visibleNew,
       },
     ]);
 
@@ -68,7 +71,17 @@ export default function SubCategories() {
 
     // reset & reload
     setNewSubcategory({ name: "", categoryId: newSubcategory.categoryId });
+    setVisibleNew(false);
     getSubCategories();
+  }
+
+  async function toggleSubVisibility(id, current) {
+    const { error } = await supabase
+      .from("product_subcategories")
+      .update({ user_visibility: !current })
+      .eq("id", id);
+    if (error) Alert.alert("Error", "Failed to update visibility");
+    else getSubCategories();
   }
 
   // ============================= LOADING =============================
@@ -119,6 +132,17 @@ export default function SubCategories() {
           style={styles.input}
         />
 
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <Text style={{ marginRight: 8 }}>Visible to users</Text>
+          <Switch value={visibleNew} onValueChange={setVisibleNew} />
+        </View>
+
         <Button
           block
           onPress={handleAddSubcategory}
@@ -141,13 +165,30 @@ export default function SubCategories() {
 
             return (
               <View key={s.id} style={styles.listItem}>
-                <Text style={styles.listText}>
-                  {s.name}
-                  <Text style={styles.mutedText}>
-                    {" "}
-                    ({parent?.name || "Unassigned"})
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={styles.listText}>
+                    {s.name}
+                    <Text style={styles.mutedText}>
+                      {" "}
+                      ({parent?.name || "Unassigned"})
+                    </Text>
                   </Text>
-                </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text style={{ marginRight: 6, color: "#777" }}>Visible</Text>
+                    <Switch
+                      value={!!s.user_visibility}
+                      onValueChange={() =>
+                        toggleSubVisibility(s.id, !!s.user_visibility)
+                      }
+                    />
+                  </View>
+                </View>
               </View>
             );
           })

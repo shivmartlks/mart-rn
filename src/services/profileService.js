@@ -1,7 +1,10 @@
 import { supabase } from "../services/supabase";
-
+import { cacheGet, cacheSet, cacheClear } from "./cache";
 
 export async function getProfile() {
+  const cached = cacheGet("profile");
+  if (cached) return cached;
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -14,6 +17,7 @@ export async function getProfile() {
     .single();
 
   if (error) throw error;
+  cacheSet("profile", data, 5 * 60 * 1000); // 5 min TTL
   return data;
 }
 
@@ -29,5 +33,6 @@ export async function updateProfile(updates) {
     .eq("id", user.id);
 
   if (error) throw error;
+  cacheClear("profile");
   return true;
 }

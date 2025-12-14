@@ -21,6 +21,7 @@ import { addToCart, removeFromCart } from "../../services/cartService";
 import Toast from "react-native-toast-message";
 import { placeOrder } from "../../services/placeOrder";
 import CartEmptySvg from "../../../assets/cart_empty.svg";
+import { cacheGet, cacheSet, cacheClear } from "../../services/cache";
 
 // Theme tokens (use your theme module)
 import { colors, spacing, textSizes, fontWeights, radii } from "../../theme";
@@ -50,9 +51,19 @@ export default function Cart() {
   );
 
   // -----------------------------
-  // Load Cart
+  // Load Cart (with cache)
   // -----------------------------
   async function loadCart() {
+    const cartKey = user ? `cart:${user.id}` : null;
+    if (cartKey) {
+      const cached = cacheGet(cartKey);
+      if (cached) {
+        setCartItems(cached);
+        setLoading(false);
+        return;
+      }
+    }
+
     const { data } = await supabase
       .from("cart_items")
       .select(
@@ -67,14 +78,25 @@ export default function Cart() {
       )
       .eq("user_id", user.id);
 
-    setCartItems(data || []);
+    const list = data || [];
+    setCartItems(list);
+    if (cartKey) cacheSet(cartKey, list, 5 * 60 * 1000);
     setLoading(false);
   }
 
   // -----------------------------
-  // Load Default Address
+  // Load Default Address (with cache)
   // -----------------------------
   async function loadDefaultAddress() {
+    const addrKey = user ? `defaultAddress:${user.id}` : null;
+    if (addrKey) {
+      const cached = cacheGet(addrKey);
+      if (cached) {
+        setDefaultAddress(cached);
+        return;
+      }
+    }
+
     const { data } = await supabase
       .from("addresses")
       .select("*")
@@ -82,7 +104,24 @@ export default function Cart() {
       .order("is_default", { ascending: false })
       .limit(1);
 
-    setDefaultAddress(data?.[0] || null);
+    const addr = data?.[0] || null;
+    setDefaultAddress(addr);
+    if (addrKey) cacheSet(addrKey, addr, 5 * 60 * 1000);
+  }
+
+  // -----------------------------
+  // Add / Remove with cache invalidation
+  // -----------------------------
+  async function onIncrease(productId) {
+    await addToCart(productId, user.id);
+    cacheClear(user ? `cart:${user.id}` : undefined);
+    loadCart();
+  }
+
+  async function onDecrease(productId) {
+    await removeFromCart(productId, user.id);
+    cacheClear(user ? `cart:${user.id}` : undefined);
+    loadCart();
   }
 
   // -----------------------------
@@ -168,7 +207,7 @@ export default function Cart() {
     );
 
   // -----------------------------
-  // Place Order
+  // Place Order (clear cart cache and orders cache)
   // -----------------------------
   async function handleOrder() {
     try {
@@ -208,6 +247,10 @@ export default function Cart() {
       }
 
       const orderId = await placeOrder(user, defaultAddress.id, paymentMethod);
+
+      // Invalidate caches after successful order
+      cacheClear(user ? `cart:${user.id}` : undefined);
+      cacheClear(user ? `orders:${user.id}` : undefined);
 
       Toast.show({
         type: "success",
@@ -343,12 +386,10 @@ export default function Cart() {
                   mode="filled"
                   size="sm"
                   onIncrease={async () => {
-                    await addToCart(i.product_id, user.id);
-                    loadCart();
+                    await onIncrease(i.product_id);
                   }}
                   onDecrease={async () => {
-                    await removeFromCart(i.product_id, user.id);
-                    loadCart();
+                    await onDecrease(i.product_id);
                   }}
                   disableIncrease={i.quantity >= p.stock_value} // Disable + button if stock is exceeded
                   style={{ marginTop: spacing.sm }}
@@ -366,6 +407,8 @@ export default function Cart() {
                       .delete()
                       .eq("user_id", user.id)
                       .eq("product_id", i.product_id);
+                    cacheClear(user ? `cart:${user.id}` : undefined);
+                    cacheClear(user ? `wishlist:${user.id}` : undefined);
                     loadCart();
                   }}
                 >

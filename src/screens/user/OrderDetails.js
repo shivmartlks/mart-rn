@@ -7,12 +7,17 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { supabase } from "../../services/supabase";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  useIsFocused,
+} from "@react-navigation/native";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import Card from "../../components/ui/Card";
 import Divider from "../../components/ui/Divider";
 import Badge from "../../components/ui/Badge";
 import { getStatusVariant } from "../../utils/orderUtils";
+import { cacheGet, cacheSet } from "../../services/cache";
 
 export default function OrderDetails() {
   const navigation = useNavigation();
@@ -21,19 +26,37 @@ export default function OrderDetails() {
 
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isFocused = useIsFocused();
+  const cacheKey = id ? `order:${id}` : null;
 
   useEffect(() => {
     loadOrder();
   }, [id]);
 
+  useEffect(() => {
+    if (isFocused) loadOrder();
+  }, [isFocused]);
+
   async function loadOrder() {
+    if (cacheKey) {
+      const cached = cacheGet(cacheKey);
+      if (cached) {
+        setOrder(cached);
+        setLoading(false);
+        return;
+      }
+    }
+
     const { data, error } = await supabase
       .from("orders")
       .select("*")
       .eq("id", id)
       .maybeSingle();
 
-    if (!error) setOrder(data);
+    if (!error) {
+      setOrder(data);
+      if (cacheKey) cacheSet(cacheKey, data, 2 * 60 * 1000);
+    }
     setLoading(false);
   }
 

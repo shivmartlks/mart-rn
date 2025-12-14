@@ -9,8 +9,13 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../services/supabase";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import {
+  useNavigation,
+  useRoute,
+  useIsFocused,
+} from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import {
   addToCart,
@@ -22,6 +27,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
 import QuantitySelector from "../../components/ui/QuantitySelector";
 import DefaultProduct from "../../../assets/default_product.svg";
+import { cacheGet, cacheSet } from "../../services/cache";
 
 // Theme tokens
 import { colors, spacing, textSizes, radii, fontWeights } from "../../theme";
@@ -31,6 +37,7 @@ export default function Products() {
   const route = useRoute();
   const { user } = useAuth();
   const { id: subcategoryId } = route.params;
+  const isFocused = useIsFocused();
 
   const [groups, setGroups] = useState([]);
   const [products, setProducts] = useState([]);
@@ -47,27 +54,48 @@ export default function Products() {
     if (subcategoryId && user) fetchData(subcategoryId);
   }, [subcategoryId, user]);
 
+  useEffect(() => {
+    if (isFocused && subcategoryId && user) fetchData(subcategoryId);
+  }, [isFocused]);
+
   async function fetchData(id) {
     setLoading(true);
 
     try {
-      const { data: grps } = await supabase
-        .from("product_groups")
-        .select("*")
-        .eq("subcategory_id", id)
-        .order("name");
+      const grpKey = `groups:${id}`;
+      const prodKey = `products:${id}`;
+      const cachedGroups = cacheGet(grpKey);
+      const cachedProducts = cacheGet(prodKey);
 
-      const groupIds = (grps || []).map((g) => g.id);
+      if (cachedGroups && cachedProducts) {
+        setGroups(cachedGroups);
+        setProducts(cachedProducts);
+        if (cachedGroups.length) setActiveGroup(cachedGroups[0].id);
+      } else {
+        const { data: grps } = await supabase
+          .from("product_groups")
+          .select("*")
+          .eq("subcategory_id", id)
+          .eq("user_visibility", true)
+          .order("name");
 
-      const { data: prods } = await supabase
-        .from("products")
-        .select("*")
-        .in("group_id", groupIds)
-        .order("name");
+        const groupIds = (grps || []).map((g) => g.id);
 
-      setGroups(grps || []);
-      setProducts(prods || []);
-      if (grps?.length) setActiveGroup(grps[0].id);
+        const { data: prods } = await supabase
+          .from("products")
+          .select("*")
+          .in("group_id", groupIds)
+          .eq("user_visibility", true)
+          .order("name");
+
+        const g = grps || [];
+        const p = prods || [];
+        setGroups(g);
+        setProducts(p);
+        if (g.length) setActiveGroup(g[0].id);
+        cacheSet(grpKey, g);
+        cacheSet(prodKey, p);
+      }
 
       if (user) {
         const count = await getCartCount(user.id);
@@ -127,9 +155,7 @@ export default function Products() {
   // ------------------------------------
   // Filtered products
   // ------------------------------------
-  const filteredProducts = products.filter(
-    (p) => p.group_id === activeGroup // Include all products in the active group
-  );
+  const filteredProducts = products.filter((p) => p.group_id === activeGroup);
 
   if (loading) {
     return (
@@ -146,6 +172,9 @@ export default function Products() {
   // Render Product Card
   // ------------------------------------
   const renderProduct = ({ item: p }) => {
+    // Skip rendering if product is not available or hidden
+    if (p.user_visibility === false) return null;
+
     const qty = cartItems[p.id] || 0;
     const mrp = p.mrp || p.price;
     const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
@@ -155,13 +184,12 @@ export default function Products() {
     const isLowStock = p.stock_value < 5 && p.stock_value > 0;
 
     return (
-      <View
-        style={[
-          styles.productCard,
-          isOutOfStock && { opacity: 0.5 }, // Gray out the product if out of stock
-        ]}
-      >
-        <View style={styles.imageWrapper}>
+      <View style={[styles.productCard, isOutOfStock && { opacity: 0.5 }]}>
+        {/* Make image area pressable to open Product Details */}
+        <Pressable
+          style={styles.imageWrapper}
+          onPress={() => navigation.navigate("ProductDetails", { product: p })}
+        >
           {isValidImage ? (
             <Image
               source={{ uri: p.image_url }}
@@ -181,27 +209,32 @@ export default function Products() {
             </View>
           )}
 
-          {/* Floating ADD / Qty — use QuantitySelector (advanced) + style positioning */}
+          {/* Floating ADD / Qty */}
           {!isOutOfStock && (
             <QuantitySelector
               value={qty}
               variant="advanced"
-              mode="filled" // outline pill in product grid
+              mode="filled"
               size="sm"
               onIncrease={() => handleAdd(p)}
               onDecrease={() => handleRemove(p)}
-              style={{ position: "absolute", bottom: 8, right: 8 }} // floating placement
-              disableIncrease={qty >= p.stock_value} // Disable + button if stock is exceeded
+              style={{ position: "absolute", bottom: 8, right: 8 }}
+              disableIncrease={qty >= p.stock_value}
             />
           )}
-        </View>
+        </Pressable>
 
-        <Text style={styles.productName} numberOfLines={2}>
-          {p.name}
-        </Text>
-        <Text style={styles.shortDesc} numberOfLines={1}>
-          {p.short_desc || p.description}
-        </Text>
+        {/* Make name/short desc pressable too */}
+        <Pressable
+          onPress={() => navigation.navigate("ProductDetails", { product: p })}
+        >
+          <Text style={styles.productName} numberOfLines={2}>
+            {p.name}
+          </Text>
+          <Text style={styles.shortDesc} numberOfLines={1}>
+            {p.short_desc || p.description}
+          </Text>
+        </Pressable>
 
         <View style={styles.priceRow}>
           <Text style={styles.price}>₹{p.price}</Text>
@@ -211,7 +244,6 @@ export default function Products() {
           )}
         </View>
 
-        {/* Stock Warnings */}
         {isLowStock && !isOutOfStock && (
           <Text style={styles.lowStockWarning}>Hurry, only few left</Text>
         )}
@@ -239,8 +271,8 @@ export default function Products() {
 
   return (
     <View style={[styles.screen]}>
+      {/* Ensure scroll area has extra bottom padding so content isn’t hidden behind floating button */}
       <View style={styles.mainContent}>
-        {/* Left Pane: Group Sidebar */}
         <View style={styles.sidebar}>
           <FlatList
             data={groups}
@@ -288,7 +320,7 @@ export default function Products() {
               scrollEnabled={true}
               contentContainerStyle={{
                 paddingHorizontal: spacing.sm,
-                paddingBottom: spacing.xl,
+                paddingBottom: spacing.xxl,
               }}
               columnWrapperStyle={{
                 justifyContent: "space-between",
@@ -299,14 +331,35 @@ export default function Products() {
         </View>
       </View>
 
-      {/* Floating Cart Button */}
+      {/* Floating Cart Button with safe area + reserved footer space */}
       {cartCount > 0 && (
-        <Button
-          onPress={() => navigation.navigate("UserTabs", { screen: "Cart" })}
-          style={styles.cartButton}
+        <SafeAreaView
+          edges={["bottom"]}
+          style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}
         >
-          {`${cartCount} items in Cart`}
-        </Button>
+          <View
+            style={{
+              paddingBottom: spacing.lg /* reserved footer CTA space */,
+            }}
+          >
+            <Button
+              onPress={() =>
+                navigation.navigate("UserTabs", { screen: "Cart" })
+              }
+              style={{
+                alignSelf: "flex-end",
+                marginRight: spacing.lg,
+                backgroundColor: colors.primary,
+                paddingVertical: spacing.sm,
+                paddingHorizontal: spacing.lg,
+                borderRadius: 28,
+                elevation: 6,
+              }}
+            >
+              {`${cartCount} items in Cart`}
+            </Button>
+          </View>
+        </SafeAreaView>
       )}
     </View>
   );

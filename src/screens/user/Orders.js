@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../services/supabase";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import { fontWeights } from "../../theme";
 import { colors, spacing, textSizes } from "../../theme";
@@ -17,26 +17,46 @@ import OrdersEmptySvg from "../../../assets/orders_empty.svg";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import { getStatusVariant } from "../../utils/orderUtils";
+import { cacheGet, cacheSet } from "../../services/cache";
 
 export default function Orders() {
   const { user } = useAuth();
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) loadOrders();
-  }, []);
+  }, [user]);
+
+  useEffect(() => {
+    if (isFocused && user) loadOrders();
+  }, [isFocused]);
 
   async function loadOrders() {
+    const cacheKey = user ? `orders:${user.id}` : null;
+    if (cacheKey) {
+      const cached = cacheGet(cacheKey);
+      if (cached) {
+        setOrders(cached);
+        setLoading(false);
+        return;
+      }
+    }
+
     const { data, error } = await supabase
       .from("orders")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (!error) setOrders(data || []);
+    if (!error) {
+      const list = data || [];
+      setOrders(list);
+      if (cacheKey) cacheSet(cacheKey, list, 2 * 60 * 1000); // 2 min TTL
+    }
     setLoading(false);
   }
 

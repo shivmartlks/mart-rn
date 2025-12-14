@@ -13,10 +13,12 @@ import Button from "../../components/ui/Button";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import Card from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
+import Switch from "../../components/ui/Switch";
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState("");
+  const [visibleNew, setVisibleNew] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function Categories() {
 
     const { error } = await supabase
       .from("product_categories")
-      .insert([{ name: newCategory }]);
+      .insert([{ name: newCategory, user_visibility: visibleNew }]);
 
     if (error) {
       Alert.alert("Error", "Could not add category");
@@ -49,7 +51,17 @@ export default function Categories() {
     }
 
     setNewCategory("");
+    setVisibleNew(false);
     loadCategories();
+  }
+
+  async function toggleCategoryVisibility(id, current) {
+    const { error } = await supabase
+      .from("product_categories")
+      .update({ user_visibility: !current })
+      .eq("id", id);
+    if (error) Alert.alert("Error", "Failed to update visibility");
+    else loadCategories();
   }
 
   return (
@@ -77,6 +89,16 @@ export default function Categories() {
           size="md"
           style={{ marginBottom: spacing.md }}
         />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            marginBottom: spacing.md,
+          }}
+        >
+          <Text style={{ marginRight: spacing.sm }}>Visible to users</Text>
+          <Switch value={visibleNew} onValueChange={setVisibleNew} />
+        </View>
         <Button block onPress={handleAddCategory}>
           Add Category
         </Button>
@@ -118,11 +140,35 @@ export default function Categories() {
                 borderColor: colors.divider,
               }}
             >
-              <Text
-                style={{ fontSize: textSizes.md, color: colors.textPrimary }}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
               >
-                {c.name}
-              </Text>
+                <Text
+                  style={{ fontSize: textSizes.md, color: colors.textPrimary }}
+                >
+                  {c.name}
+                </Text>
+                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                  <Text
+                    style={{
+                      marginRight: spacing.xs,
+                      color: colors.textSecondary,
+                    }}
+                  >
+                    Visible
+                  </Text>
+                  <Switch
+                    value={!!c.user_visibility}
+                    onValueChange={() =>
+                      toggleCategoryVisibility(c.id, !!c.user_visibility)
+                    }
+                  />
+                </View>
+              </View>
             </View>
           ))
         )}

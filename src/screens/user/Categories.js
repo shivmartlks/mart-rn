@@ -15,30 +15,54 @@ import Chip from "../../components/ui/Chip";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import { IMAGES } from "../../const/imageConst";
 import DefaultCategories from "../../../assets/default_categories.svg";
+import { useIsFocused } from "@react-navigation/native";
+import { cacheGet, cacheSet } from "../../services/cache";
 
 export default function Categories() {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const navigation = useNavigation();
+  const isFocused = useIsFocused();
 
   useEffect(() => {
     fetchData();
   }, []);
 
+  // Re-fetch when screen is focused
+  useEffect(() => {
+    if (isFocused) fetchData();
+  }, [isFocused]);
+
   async function fetchData() {
+    const cachedCats = cacheGet("categories");
+    const cachedSubs = cacheGet("subcategories");
+    if (cachedCats && cachedSubs) {
+      setCategories(cachedCats);
+      setSubcategories(cachedSubs);
+      return;
+    }
+
     const { data: categoriesData } = await supabase
       .from("product_categories")
       .select("*")
+      .eq("user_visibility", true)
       .order("name");
     const { data: subcategoriesData } = await supabase
       .from("product_subcategories")
       .select("*")
+      .eq("user_visibility", true)
       .order("name");
-    setCategories(categoriesData || []);
-    setSubcategories(subcategoriesData || []);
+
+    const cats = categoriesData || [];
+    const subs = subcategoriesData || [];
+    setCategories(cats);
+    setSubcategories(subs);
+    cacheSet("categories", cats);
+    cacheSet("subcategories", subs);
   }
 
   const renderSubcategoryItem = (sub) => {
+    if (sub.user_visibility === false) return null;
     const isValidImage =
       sub.image_url &&
       typeof sub.image_url === "string" &&
@@ -68,6 +92,7 @@ export default function Categories() {
   };
 
   const renderCategory = ({ item: cat }) => {
+    if (cat.user_visibility === false) return null;
     const catSubs = subcategories.filter((s) => s.category_id === cat.id);
     return (
       <View style={{ marginBottom: spacing.md }}>

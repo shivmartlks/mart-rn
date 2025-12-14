@@ -18,6 +18,7 @@ import Card from "../../components/ui/Card";
 import Divider from "../../components/ui/Divider";
 import { SafeAreaView } from "react-native-safe-area-context";
 import WishlistEmptySvg from "../../../assets/wishlist_empty.svg";
+import { cacheGet, cacheSet, cacheClear } from "../../services/cache";
 
 // =====================================================
 // MAIN WISHLIST SCREEN
@@ -47,6 +48,16 @@ export default function Wishlist() {
   async function loadWishlist() {
     setLoading(true);
 
+    const cacheKey = user ? `wishlist:${user.id}` : null;
+    if (cacheKey) {
+      const cached = cacheGet(cacheKey);
+      if (cached) {
+        setItems(cached);
+        setLoading(false);
+        return;
+      }
+    }
+
     const { data, error } = await supabase
       .from("wishlist")
       .select(
@@ -66,7 +77,11 @@ export default function Wishlist() {
       )
       .eq("user_id", user.id);
 
-    if (!error) setItems(data || []);
+    if (!error) {
+      const list = data || [];
+      setItems(list);
+      if (cacheKey) cacheSet(cacheKey, list, 5 * 60 * 1000);
+    }
 
     setLoading(false);
   }
@@ -76,6 +91,7 @@ export default function Wishlist() {
   // -----------------------------------------------------
   async function removeItem(wishlistId) {
     await supabase.from("wishlist").delete().eq("id", wishlistId);
+    cacheClear(user ? `wishlist:${user.id}` : undefined);
     loadWishlist();
   }
 
@@ -108,8 +124,7 @@ export default function Wishlist() {
 
     // Remove item from wishlist
     await supabase.from("wishlist").delete().eq("id", wishlistId);
-
-    // Refresh UI
+    cacheClear(user ? `wishlist:${user.id}` : undefined);
     loadWishlist();
   }
 

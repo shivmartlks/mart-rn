@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useIsFocused } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
+import { cacheGet, cacheSet, cacheClear } from "../../services/cache";
 import Button from "../../components/ui/Button";
 import Card from "../../components/ui/Card";
 import Modal from "../../components/ui/Modal";
@@ -25,6 +26,15 @@ export default function ManageAddresses() {
   }, [user, isFocused]);
 
   async function loadAddresses() {
+    const cacheKey = user ? `addresses:${user.id}` : null;
+    if (cacheKey) {
+      const cached = cacheGet(cacheKey);
+      if (cached) {
+        setAddresses(cached);
+        return;
+      }
+    }
+
     const { data, error } = await supabase
       .from("addresses")
       .select("*")
@@ -33,11 +43,17 @@ export default function ManageAddresses() {
       .order("id", { ascending: true })
       .order("created_at", { ascending: true });
 
-    if (!error) setAddresses(data || []);
+    if (!error) {
+      const list = data || [];
+      setAddresses(list);
+      if (cacheKey) cacheSet(cacheKey, list, 5 * 60 * 1000);
+    }
   }
 
   async function setDefaultAddress(id) {
     await supabase.from("addresses").update({ is_default: true }).eq("id", id);
+    // Invalidate cache and reload
+    cacheClear(user ? `addresses:${user.id}` : undefined);
     loadAddresses();
   }
 
@@ -46,6 +62,7 @@ export default function ManageAddresses() {
     await supabase.from("addresses").delete().eq("id", id);
     setDeleting(false);
     setConfirmDeleteId(null);
+    cacheClear(user ? `addresses:${user.id}` : undefined);
     loadAddresses();
     showSuccess("Address deleted", "The address was removed successfully.");
   }

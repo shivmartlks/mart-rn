@@ -49,7 +49,7 @@ export default function AdminLayout() {
           return <Feather name={icon} size={size} color={color} />;
         },
       })}
-      tabBar={(props) => <Footer role="admin" />}
+      tabBar={(props) => <Footer {...props} role="admin" />}
     >
       <Tab.Screen name="Dashboard" component={AdminDashboard} />
       <Tab.Screen name="Products" component={ManageProducts} />
