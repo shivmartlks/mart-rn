@@ -1,114 +1,56 @@
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../services/supabase";
-import { fetchGroups, fetchProducts } from "../../services/adminApi";
+import { fetchProducts } from "../../services/adminApi";
 import Button from "../../components/ui/Button";
+import { colors, spacing, textSizes } from "../../theme";
 
 export default function Products() {
+  const navigation = useNavigation();
   const [products, setProducts] = useState([]);
-  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
-  const [newProduct, setNewProduct] = useState({
-    name: "",
-    description: "",
-    mrp: "",
-    price: "",
-    image_url: "",
-    stock_value: "",
-    stock_type: "quantity",
-    stock_unit: "pcs",
-    group_id: "",
-  });
-
-  useEffect(() => {
-    loadInitial();
-  }, []);
-
-  async function loadInitial() {
-    setLoading(true);
-    await loadGroups();
-    await loadProducts();
-    setLoading(false);
-  }
-
-  async function loadGroups() {
-    const { data, error } = await fetchGroups();
-    if (error) Alert.alert("Error", "Failed to fetch groups");
-    else setGroups(data || []);
-  }
+  useEffect(() => { loadProducts(); }, []);
 
   async function loadProducts() {
+    setLoading(true);
     const { data, error } = await fetchProducts();
     if (error) Alert.alert("Error", "Failed to fetch products");
     else setProducts(data || []);
+    setLoading(false);
   }
 
-  async function handleAddProduct() {
-    const {
-      name,
-      description,
-      mrp,
-      price,
-      image_url,
-      stock_value,
-      stock_type,
-      stock_unit,
-      group_id,
-    } = newProduct;
-
-    if (!name || !price || !group_id) {
-      Alert.alert("Missing Fields", "Name, Price & Group are required.");
-      return;
-    }
-
-    const payload = {
-      name,
-      description,
-      mrp: Number(mrp) || Number(price),
-      price: Number(price),
-      image_url,
-      stock_value: Number(stock_value) || 0,
-      stock_type,
-      stock_unit,
-      group_id,
-    };
-
-    setIsSubmitting(true);
-    const { error } = await supabase.from("products").insert([payload]);
-    setIsSubmitting(false);
-
-    if (error) {
-      Alert.alert("Error", error.message);
-      return;
-    }
-
-    // reset
-    setNewProduct({
-      name: "",
-      description: "",
-      mrp: "",
-      price: "",
-      image_url: "",
-      stock_value: "",
-      stock_type: "quantity",
-      stock_unit: "pcs",
-      group_id: "",
-    });
-
-    loadProducts();
+  async function confirmDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
+    const { error } = await supabase.from("products").delete().eq("id", deleteId);
+    setDeleting(false);
+    setDeleteId(null);
+    if (error) Alert.alert("Error", "Failed to delete product");
+    else loadProducts();
   }
 
-  // ----------------------------------------------------------
+  function renderRow(p) {
+    return (
+      <View key={p.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: spacing.sm, borderBottomWidth: 1, borderColor: colors.divider }}>
+        <View style={{ flex: 1, paddingRight: spacing.sm }}>
+          <Text style={{ color: colors.textPrimary, fontSize: textSizes.sm }}>
+            {p.name} <Text style={{ color: colors.textSecondary }}>₹{p.price}</Text>
+          </Text>
+        </View>
+        <View style={{ flexDirection: "row", columnGap: spacing.xs, alignItems: "center" }}>
+          <Button size="sm" variant="secondary" onPress={() => navigation.navigate("AdminForm", { type: "product", mode: "view", id: p.id })}>View</Button>
+          <Button size="sm" onPress={() => navigation.navigate("AdminForm", { type: "product", mode: "edit", id: p.id })}>Edit</Button>
+          <Button size="sm" variant="secondary" textStyle={{ color: colors.danger }} style={{ borderColor: colors.danger }} onPress={() => setDeleteId(p.id)}>Delete</Button>
+        </View>
+      </View>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -118,224 +60,34 @@ export default function Products() {
     );
   }
 
-  // ----------------------------------------------------------
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Add New Product</Text>
-
-      {/* Add Product Card */}
-      <View style={styles.card}>
-        {/* Name */}
-        <TextInput
-          placeholder="Product Name"
-          value={newProduct.name}
-          onChangeText={(v) => setNewProduct((p) => ({ ...p, name: v }))}
-          style={styles.input}
-        />
-
-        {/* Description */}
-        <TextInput
-          placeholder="Description"
-          value={newProduct.description}
-          onChangeText={(v) => setNewProduct((p) => ({ ...p, description: v }))}
-          style={styles.input}
-        />
-
-        {/* MRP */}
-        <TextInput
-          placeholder="MRP"
-          keyboardType="numeric"
-          value={newProduct.mrp}
-          onChangeText={(v) => setNewProduct((p) => ({ ...p, mrp: v }))}
-          style={styles.input}
-        />
-
-        {/* Price */}
-        <TextInput
-          placeholder="Selling Price"
-          keyboardType="numeric"
-          value={newProduct.price}
-          onChangeText={(v) => setNewProduct((p) => ({ ...p, price: v }))}
-          style={styles.input}
-        />
-
-        {/* Image URL */}
-        <TextInput
-          placeholder="Image URL"
-          value={newProduct.image_url}
-          onChangeText={(v) => setNewProduct((p) => ({ ...p, image_url: v }))}
-          style={styles.input}
-        />
-
-        {/* Stock Value */}
-        <TextInput
-          placeholder="Stock Quantity"
-          keyboardType="numeric"
-          value={newProduct.stock_value}
-          onChangeText={(v) => setNewProduct((p) => ({ ...p, stock_value: v }))}
-          style={styles.input}
-        />
-
-        {/* Stock Type Toggle */}
-        <Button
-          variant="secondary"
-          onPress={() =>
-            setNewProduct((prev) => ({
-              ...prev,
-              stock_type:
-                prev.stock_type === "quantity" ? "weight" : "quantity",
-            }))
-          }
-        >
-          {`Stock Type: ${
-            newProduct.stock_type === "quantity"
-              ? "Quantity (pcs)"
-              : "Weight (kg)"
-          }`}
-        </Button>
-
-        {/* Group Dropdown */}
-        <Text style={styles.dropdownLabel}>Select Group</Text>
-        <View style={styles.dropdownBox}>
-          <ScrollView style={{ maxHeight: 150 }}>
-            {groups.map((g) => (
-              <Button
-                key={g.id}
-                onPress={() =>
-                  setNewProduct((prev) => ({ ...prev, group_id: g.id }))
-                }
-                variant={newProduct.group_id === g.id ? "default" : "ghost"}
-                style={styles.option}
-                textStyle={styles.optionText}
-              >
-                {g.name}
-              </Button>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Add Product Button */}
-        <Button
-          block
-          onPress={handleAddProduct}
-          loading={isSubmitting}
-          disabled={isSubmitting}
-        >
-          Add Product
-        </Button>
-      </View>
-
-      {/* Product List */}
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>All Products</Text>
-
-        {products.length === 0 ? (
-          <Text style={styles.emptyText}>No products available.</Text>
-        ) : (
-          products.map((p) => (
-            <View key={p.id} style={styles.listItem}>
-              <Text style={styles.listText}>
-                {p.name} — ₹{p.price}{" "}
-                <Text style={styles.listSubText}>
-                  ({p.stock_value} {p.stock_unit})
-                </Text>
-              </Text>
+    <View style={{ flex: 1, backgroundColor: colors.screenBG }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: spacing.md, paddingVertical: spacing.md, paddingBottom: spacing.xl }}>
+        <View style={styles.card}>
+          <View style={{ flexDirection: "row", paddingVertical: spacing.xs, borderBottomWidth: 1, borderColor: colors.border }}>
+            <Text style={{ flex: 1, color: colors.textSecondary }}>Product</Text>
+            <Text style={{ width: 220, textAlign: "right", color: colors.textSecondary }}>Actions</Text>
+          </View>
+          {products.length === 0 ? (
+            <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+              <Text style={{ color: colors.textSecondary, fontSize: textSizes.sm }}>No products added yet.</Text>
             </View>
-          ))
-        )}
-      </View>
-    </ScrollView>
+          ) : (
+            products.map(renderRow)
+          )}
+        </View>
+      </ScrollView>
+
+      <SafeAreaView edges={["bottom"]} style={{ backgroundColor: colors.cardBG, borderTopWidth: 1, borderTopColor: colors.border }}>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 8 }}>
+          <Button block onPress={() => navigation.navigate("AdminForm", { type: "product", mode: "edit" })}>Add Product</Button>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
-// ----------------------------------------------------
-// STYLES
-// ----------------------------------------------------
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: "#F5F5F5",
-  },
-
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-
-  card: {
-    backgroundColor: "#FFF",
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#DDD",
-  },
-
-  input: {
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 10,
-  },
-
-  dropdownLabel: {
-    marginTop: 8,
-    marginBottom: 6,
-    color: "#555",
-    fontSize: 14,
-  },
-
-  dropdownBox: {
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-
-  option: {
-    justifyContent: "flex-start",
-  },
-
-  optionText: {
-    fontWeight: "normal",
-  },
-
-  subtitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-
-  emptyText: {
-    color: "#999",
-  },
-
-  listItem: {
-    backgroundColor: "#FAFAFA",
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-
-  listText: {
-    fontSize: 16,
-    color: "#333",
-  },
-
-  listSubText: {
-    color: "#777",
-    fontSize: 14,
-  },
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  card: { backgroundColor: colors.cardBG, padding: spacing.md, borderRadius: 16, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.lg },
 });

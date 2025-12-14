@@ -10,16 +10,17 @@ import {
 import { supabase } from "../../services/supabase";
 import { fetchCategories } from "../../services/adminApi";
 import Button from "../../components/ui/Button";
-import { colors, spacing, textSizes, fontWeights } from "../../theme";
+import { colors, spacing, textSizes } from "../../theme";
 import Card from "../../components/ui/Card";
-import Input from "../../components/ui/Input";
-import Switch from "../../components/ui/Switch";
+import { useNavigation } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Categories() {
+  const navigation = useNavigation();
   const [categories, setCategories] = useState([]);
-  const [newCategory, setNewCategory] = useState("");
-  const [visibleNew, setVisibleNew] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -28,158 +29,196 @@ export default function Categories() {
   async function loadCategories() {
     setLoading(true);
     const { data, error } = await fetchCategories();
-
-    if (error) {
-      Alert.alert("Error", "Failed to fetch categories");
-    } else {
-      setCategories(data || []);
-    }
-
+    if (error) Alert.alert("Error", "Failed to fetch categories");
+    else setCategories(data || []);
     setLoading(false);
   }
 
-  async function handleAddCategory() {
-    if (!newCategory.trim()) return;
-
+  async function confirmDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
     const { error } = await supabase
       .from("product_categories")
-      .insert([{ name: newCategory, user_visibility: visibleNew }]);
-
-    if (error) {
-      Alert.alert("Error", "Could not add category");
-      return;
-    }
-
-    setNewCategory("");
-    setVisibleNew(false);
-    loadCategories();
-  }
-
-  async function toggleCategoryVisibility(id, current) {
-    const { error } = await supabase
-      .from("product_categories")
-      .update({ user_visibility: !current })
-      .eq("id", id);
-    if (error) Alert.alert("Error", "Failed to update visibility");
+      .delete()
+      .eq("id", deleteId);
+    setDeleting(false);
+    setDeleteId(null);
+    if (error) Alert.alert("Error", "Failed to delete category");
     else loadCategories();
   }
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.screenBG }}
-      contentContainerStyle={{ padding: spacing.lg }}
-    >
-      <Text
+  function renderRow(c) {
+    return (
+      <View
+        key={c.id}
         style={{
-          fontSize: textSizes.lg,
-          fontWeight: fontWeights.bold,
-          color: colors.textPrimary,
-          marginBottom: spacing.md,
+          flexDirection: "row",
+          alignItems: "center",
+          paddingVertical: spacing.sm,
+          borderBottomWidth: 1,
+          borderColor: colors.divider,
         }}
       >
-        Add New Category
-      </Text>
-
-      {/* Add Category Box */}
-      <Card style={{ marginBottom: spacing.lg }}>
-        <Input
-          placeholder="Category Name"
-          value={newCategory}
-          onChangeText={setNewCategory}
-          size="md"
-          style={{ marginBottom: spacing.md }}
-        />
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: spacing.md,
-          }}
-        >
-          <Text style={{ marginRight: spacing.sm }}>Visible to users</Text>
-          <Switch value={visibleNew} onValueChange={setVisibleNew} />
+        <View style={{ flex: 1, paddingRight: spacing.sm }}>
+          <Text style={{ color: colors.textPrimary, fontSize: textSizes.sm }}>
+            {c.name}
+          </Text>
         </View>
-        <Button block onPress={handleAddCategory}>
-          Add Category
-        </Button>
-      </Card>
+        <View style={{ flexDirection: "row", columnGap: spacing.xs }}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onPress={() =>
+              navigation.getParent()?.navigate("AdminForm", {
+                type: "category",
+                mode: "view",
+                id: c.id,
+              })
+            }
+          >
+            View
+          </Button>
+          <Button
+            size="sm"
+            onPress={() =>
+              navigation.getParent()?.navigate("AdminForm", {
+                type: "category",
+                mode: "edit",
+                id: c.id,
+              })
+            }
+          >
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            textStyle={{ color: colors.danger }}
+            style={{ borderColor: colors.danger }}
+            onPress={() => setDeleteId(c.id)}
+          >
+            Delete
+          </Button>
+        </View>
+      </View>
+    );
+  }
 
-      {/* Category List */}
-      <Card>
-        <Text
-          style={{
-            fontSize: textSizes.md,
-            fontWeight: fontWeights.semibold,
-            color: colors.textPrimary,
-            marginBottom: spacing.sm,
-          }}
-        >
-          Existing Categories
-        </Text>
-        {loading ? (
-          <ActivityIndicator
-            size="small"
-            color={colors.primary}
-            style={{ marginTop: spacing.sm }}
-          />
-        ) : categories.length === 0 ? (
-          <View style={{ alignItems: "center", paddingVertical: spacing.lg }}>
-            <Text
-              style={{ color: colors.textSecondary, fontSize: textSizes.sm }}
-            >
-              No categories yet.
-            </Text>
-          </View>
-        ) : (
-          categories.map((c) => (
-            <View
-              key={c.id}
-              style={{
-                paddingVertical: spacing.sm,
-                borderBottomWidth: 1,
-                borderColor: colors.divider,
-              }}
-            >
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.screenBG }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.md,
+          paddingBottom: spacing.xl,
+        }}
+      >
+        {/* Section: Category list (table-like) */}
+        <Card style={{ padding: spacing.md, marginBottom: spacing.lg }}>
+          {loading ? (
+            <ActivityIndicator
+              size="small"
+              color={colors.primary}
+              style={{ marginTop: spacing.sm }}
+            />
+          ) : (Array.isArray(categories) ? categories.length === 0 : true) ? (
+            <View style={{ alignItems: "center", paddingVertical: spacing.md }}>
+              <Text
+                style={{ color: colors.textSecondary, fontSize: textSizes.sm }}
+              >
+                No categories yet.
+              </Text>
+            </View>
+          ) : (
+            <View>
+              {/* Header row */}
               <View
                 style={{
                   flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  paddingVertical: spacing.xs,
+                  borderBottomWidth: 1,
+                  borderColor: colors.border,
                 }}
               >
-                <Text
-                  style={{ fontSize: textSizes.md, color: colors.textPrimary }}
-                >
-                  {c.name}
+                <Text style={{ flex: 1, color: colors.textSecondary }}>
+                  Category Name
                 </Text>
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  <Text
-                    style={{
-                      marginRight: spacing.xs,
-                      color: colors.textSecondary,
-                    }}
-                  >
-                    Visible
-                  </Text>
-                  <Switch
-                    value={!!c.user_visibility}
-                    onValueChange={() =>
-                      toggleCategoryVisibility(c.id, !!c.user_visibility)
-                    }
-                  />
-                </View>
+                <Text
+                  style={{
+                    width: 180,
+                    textAlign: "right",
+                    color: colors.textSecondary,
+                  }}
+                >
+                  Actions
+                </Text>
               </View>
+              {categories.map(renderRow)}
             </View>
-          ))
-        )}
-      </Card>
-    </ScrollView>
+          )}
+        </Card>
+      </ScrollView>
+
+      {/* Sticky Add Category CTA -> navigate to AdminForm (edit/add) */}
+      <SafeAreaView
+        edges={["bottom"]}
+        style={{
+          backgroundColor: colors.cardBG,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+        }}
+      >
+        <View
+          style={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+            paddingBottom: 8,
+          }}
+        >
+          <Button
+            block
+            onPress={() =>
+              navigation.getParent()?.navigate("AdminForm", {
+                type: "category",
+                mode: "edit",
+              })
+            }
+          >
+            Add Category
+          </Button>
+        </View>
+      </SafeAreaView>
+
+      {/* Delete confirmation bottom sheet */}
+      {deleteId !== null && (
+        <BottomSheet
+          visible
+          title="Delete Category"
+          onClose={() => setDeleteId(null)}
+        >
+          <Text style={{ color: colors.textSecondary }}>
+            Are you sure you want to delete this category?
+          </Text>
+          <Button
+            block
+            style={{ marginTop: spacing.lg }}
+            onPress={confirmDelete}
+            loading={deleting}
+          >
+            Yes, Delete
+          </Button>
+          <Button
+            block
+            variant="secondary"
+            style={{ marginTop: spacing.sm }}
+            onPress={() => setDeleteId(null)}
+          >
+            No, Cancel
+          </Button>
+        </BottomSheet>
+      )}
+    </View>
   );
 }
 
-// ----------------------------------------------------
-// STYLES
-// ----------------------------------------------------
-const styles = StyleSheet.create({
-  // ...remove hardcoded styles; using theme components above...
-});
+const styles = StyleSheet.create({});

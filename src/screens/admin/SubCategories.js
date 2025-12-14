@@ -8,12 +8,17 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../services/supabase";
 import { fetchCategories, fetchSubCategories } from "../../services/adminApi";
 import Button from "../../components/ui/Button";
 import Switch from "../../components/ui/Switch";
+import BottomSheet from "../../components/ui/BottomSheet";
+import { colors, spacing, textSizes } from "../../theme";
+import { useNavigation } from "@react-navigation/native";
 
 export default function SubCategories() {
+  const navigation = useNavigation();
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +28,10 @@ export default function SubCategories() {
     categoryId: "",
   });
   const [visibleNew, setVisibleNew] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadAll();
@@ -72,15 +80,20 @@ export default function SubCategories() {
     // reset & reload
     setNewSubcategory({ name: "", categoryId: newSubcategory.categoryId });
     setVisibleNew(false);
+    setAddOpen(false);
     getSubCategories();
   }
 
-  async function toggleSubVisibility(id, current) {
+  async function confirmDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
     const { error } = await supabase
       .from("product_subcategories")
-      .update({ user_visibility: !current })
-      .eq("id", id);
-    if (error) Alert.alert("Error", "Failed to update visibility");
+      .delete()
+      .eq("id", deleteId);
+    setDeleting(false);
+    setDeleteId(null);
+    if (error) Alert.alert("Error", "Failed to delete subcategory");
     else getSubCategories();
   }
 
@@ -96,105 +109,183 @@ export default function SubCategories() {
 
   // ============================= CONTENT =============================
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Add New Subcategory</Text>
-
-      {/* Add Subcategory */}
-      <View style={styles.card}>
-        {/* Category Select */}
-        <Text style={styles.dropdownLabel}>Select Category</Text>
-
-        <View style={styles.dropdown}>
-          {categories.map((cat) => (
-            <Button
-              key={cat.id}
-              onPress={() =>
-                setNewSubcategory((p) => ({ ...p, categoryId: cat.id }))
-              }
-              variant={
-                newSubcategory.categoryId === cat.id ? "default" : "ghost"
-              }
-              style={styles.option}
-              textStyle={styles.optionText}
+    <View style={{ flex: 1, backgroundColor: colors.screenBG }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.lg,
+        }}
+      >
+        {/* List table synced with Categories */}
+        <View style={styles.card}>
+          {/* Header row */}
+          <View
+            style={{
+              flexDirection: "row",
+              paddingVertical: spacing.sm,
+              borderBottomWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text style={{ flex: 1, color: colors.textSecondary }}>
+              Subcategory Name
+            </Text>
+            <Text
+              style={{
+                width: 220,
+                textAlign: "right",
+                color: colors.textSecondary,
+              }}
             >
-              {cat.name}
-            </Button>
-          ))}
-        </View>
+              Actions
+            </Text>
+          </View>
 
-        {/* Input */}
-        <TextInput
-          placeholder="Subcategory Name"
-          value={newSubcategory.name}
-          onChangeText={(val) =>
-            setNewSubcategory((p) => ({ ...p, name: val }))
-          }
-          style={styles.input}
-        />
-
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginBottom: 10,
-          }}
-        >
-          <Text style={{ marginRight: 8 }}>Visible to users</Text>
-          <Switch value={visibleNew} onValueChange={setVisibleNew} />
-        </View>
-
-        <Button
-          block
-          onPress={handleAddSubcategory}
-          loading={isSubmitting}
-          disabled={isSubmitting}
-        >
-          Add Subcategory
-        </Button>
-      </View>
-
-      {/* Existing List */}
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>All Subcategories</Text>
-
-        {subcategories.length === 0 ? (
-          <Text style={styles.emptyText}>No subcategories yet.</Text>
-        ) : (
-          subcategories.map((s) => {
-            const parent = categories.find((c) => c.id === s.category_id);
-
-            return (
-              <View key={s.id} style={styles.listItem}>
+          {subcategories.length === 0 ? (
+            <View style={{ alignItems: "center", paddingVertical: spacing.lg }}>
+              <Text
+                style={{ color: colors.textSecondary, fontSize: textSizes.sm }}
+              >
+                No subcategories yet.
+              </Text>
+            </View>
+          ) : (
+            subcategories.map((s) => {
+              const parent = categories.find((c) => c.id === s.category_id);
+              return (
                 <View
+                  key={s.id}
                   style={{
                     flexDirection: "row",
-                    justifyContent: "space-between",
                     alignItems: "center",
+                    paddingVertical: spacing.sm,
+                    borderBottomWidth: 1,
+                    borderColor: colors.divider,
                   }}
                 >
-                  <Text style={styles.listText}>
-                    {s.name}
-                    <Text style={styles.mutedText}>
-                      {" "}
-                      ({parent?.name || "Unassigned"})
+                  <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                    <Text
+                      style={{
+                        color: colors.textPrimary,
+                        fontSize: textSizes.sm,
+                      }}
+                    >
+                      {s.name}
+                      <Text style={{ color: colors.textSecondary }}>
+                        {" "}
+                        ({parent?.name || "Unassigned"})
+                      </Text>
                     </Text>
-                  </Text>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text style={{ marginRight: 6, color: "#777" }}>Visible</Text>
-                    <Switch
-                      value={!!s.user_visibility}
-                      onValueChange={() =>
-                        toggleSubVisibility(s.id, !!s.user_visibility)
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      columnGap: spacing.xs,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onPress={() =>
+                        navigation.navigate("AdminForm", {
+                          type: "subcategory",
+                          mode: "view",
+                          id: s.id,
+                        })
                       }
-                    />
+                    >
+                      View
+                    </Button>
+                    <Button
+                      size="sm"
+                      onPress={() =>
+                        navigation.navigate("AdminForm", {
+                          type: "subcategory",
+                          mode: "edit",
+                          id: s.id,
+                        })
+                      }
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      textStyle={{ color: colors.danger }}
+                      style={{ borderColor: colors.danger }}
+                      onPress={() => setDeleteId(s.id)}
+                    >
+                      Delete
+                    </Button>
                   </View>
                 </View>
-              </View>
-            );
-          })
-        )}
-      </View>
-    </ScrollView>
+              );
+            })
+          )}
+        </View>
+      </ScrollView>
+
+      {/* Sticky Add Subcategory CTA (8px bottom padding) */}
+      <SafeAreaView
+        edges={["bottom"]}
+        style={{
+          backgroundColor: colors.cardBG,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+        }}
+      >
+        <View
+          style={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+            paddingBottom: 8,
+          }}
+        >
+          <Button
+            block
+            onPress={() =>
+              navigation.navigate("AdminForm", {
+                type: "subcategory",
+                mode: "edit",
+              })
+            }
+          >
+            Add Subcategory
+          </Button>
+        </View>
+      </SafeAreaView>
+
+      {/* Delete confirmation bottom sheet */}
+      {deleteId !== null && (
+        <BottomSheet
+          visible
+          title="Delete Subcategory"
+          onClose={() => setDeleteId(null)}
+        >
+          <Text style={{ color: colors.textSecondary }}>
+            Are you sure you want to delete this subcategory?
+          </Text>
+          <Button
+            block
+            style={{ marginTop: spacing.lg }}
+            onPress={confirmDelete}
+            loading={deleting}
+          >
+            Yes, Delete
+          </Button>
+          <Button
+            block
+            variant="secondary"
+            style={{ marginTop: spacing.sm }}
+            onPress={() => setDeleteId(null)}
+          >
+            No, Cancel
+          </Button>
+        </BottomSheet>
+      )}
+    </View>
   );
 }
 

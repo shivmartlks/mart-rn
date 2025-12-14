@@ -2,22 +2,28 @@ import { useEffect, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   ScrollView,
   StyleSheet,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { supabase } from "../../services/supabase";
 import { fetchGroups, fetchSubCategories } from "../../services/adminApi";
 import Button from "../../components/ui/Button";
+import BottomSheet from "../../components/ui/BottomSheet";
+import { colors, spacing, textSizes } from "../../theme";
+import { useNavigation } from "@react-navigation/native";
 
 export default function Groups() {
+  const navigation = useNavigation();
   const [subcategories, setSubcategories] = useState([]);
   const [groups, setGroups] = useState([]);
-  const [newGroup, setNewGroup] = useState({ name: "", subcategoryId: "" });
   const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Delete state
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadInitial();
@@ -42,32 +48,22 @@ export default function Groups() {
     else setGroups(data || []);
   }
 
-  async function handleAddGroup() {
-    if (!newGroup.name.trim() || !newGroup.subcategoryId) {
-      Alert.alert("Missing Fields", "Select subcategory and enter a name.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    const { error } = await supabase.from("product_groups").insert([
-      {
-        name: newGroup.name,
-        subcategory_id: newGroup.subcategoryId,
-      },
-    ]);
-
-    setIsSubmitting(false);
-
-    if (error) {
-      Alert.alert("Error", "Failed to add group");
-      return;
-    }
-
-    setNewGroup({ name: "", subcategoryId: newGroup.subcategoryId });
-    loadGroups();
+  async function confirmDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
+    const { error } = await supabase
+      .from("product_groups")
+      .delete()
+      .eq("id", deleteId);
+    setDeleting(false);
+    setDeleteId(null);
+    if (error) Alert.alert("Error", "Failed to delete group");
+    else loadGroups();
   }
 
-  // ------------------------------------------------------------------
+  // -----------------------------
+  // UI
+  // -----------------------------
   if (loading) {
     return (
       <View style={styles.center}>
@@ -77,167 +73,193 @@ export default function Groups() {
     );
   }
 
-  // ------------------------------------------------------------------
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Add New Group</Text>
-
-      {/* Add Group Card */}
-      <View style={styles.card}>
-        {/* Subcategory Dropdown */}
-        <Text style={styles.dropdownLabel}>Select Subcategory</Text>
-
-        <View style={styles.dropdown}>
-          {subcategories.map((sub) => (
-            <Button
-              key={sub.id}
-              onPress={() =>
-                setNewGroup((prev) => ({ ...prev, subcategoryId: sub.id }))
-              }
-              variant={newGroup.subcategoryId === sub.id ? "default" : "ghost"}
-              style={styles.option}
-              textStyle={styles.optionText}
+    <View style={{ flex: 1, backgroundColor: colors.screenBG }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.md,
+          paddingVertical: spacing.lg,
+          paddingBottom: spacing.xl,
+        }}
+      >
+        {/* Table-like list synced with Categories/SubCategories */}
+        <View style={styles.card}>
+          {/* Header row */}
+          <View
+            style={{
+              flexDirection: "row",
+              paddingVertical: spacing.sm,
+              borderBottomWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text style={{ flex: 1, color: colors.textSecondary }}>
+              Group Name
+            </Text>
+            <Text
+              style={{
+                width: 220,
+                textAlign: "right",
+                color: colors.textSecondary,
+              }}
             >
-              {sub.name}
-            </Button>
-          ))}
+              Actions
+            </Text>
+          </View>
+
+          {groups.length === 0 ? (
+            <View style={{ alignItems: "center", paddingVertical: spacing.lg }}>
+              <Text
+                style={{ color: colors.textSecondary, fontSize: textSizes.sm }}
+              >
+                No groups added yet.
+              </Text>
+            </View>
+          ) : (
+            groups.map((g) => {
+              const sub = subcategories.find((s) => s.id === g.subcategory_id);
+              return (
+                <View
+                  key={g.id}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingVertical: spacing.sm,
+                    borderBottomWidth: 1,
+                    borderColor: colors.divider,
+                  }}
+                >
+                  <View style={{ flex: 1, paddingRight: spacing.sm }}>
+                    <Text
+                      style={{
+                        color: colors.textPrimary,
+                        fontSize: textSizes.sm,
+                      }}
+                    >
+                      {g.name}
+                      <Text style={{ color: colors.textSecondary }}>
+                        {" "}
+                        ({sub?.name || "Unassigned"})
+                      </Text>
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      columnGap: spacing.xs,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onPress={() =>
+                        navigation.navigate("AdminForm", {
+                          type: "group",
+                          mode: "view",
+                          id: g.id,
+                        })
+                      }
+                    >
+                      View
+                    </Button>
+                    <Button
+                      size="sm"
+                      onPress={() =>
+                        navigation.navigate("AdminForm", {
+                          type: "group",
+                          mode: "edit",
+                          id: g.id,
+                        })
+                      }
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      textStyle={{ color: colors.danger }}
+                      style={{ borderColor: colors.danger }}
+                      onPress={() => setDeleteId(g.id)}
+                    >
+                      Delete
+                    </Button>
+                  </View>
+                </View>
+              );
+            })
+          )}
         </View>
+      </ScrollView>
 
-        {/* Input Name */}
-        <TextInput
-          placeholder="Group Name"
-          value={newGroup.name}
-          onChangeText={(val) =>
-            setNewGroup((prev) => ({ ...prev, name: val }))
-          }
-          style={styles.input}
-        />
-
-        {/* Add Button */}
-        <Button
-          block
-          onPress={handleAddGroup}
-          loading={isSubmitting}
-          disabled={isSubmitting}
+      {/* Sticky Add Group CTA -> open AdminForm */}
+      <SafeAreaView
+        edges={["bottom"]}
+        style={{
+          backgroundColor: colors.cardBG,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+        }}
+      >
+        <View
+          style={{
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+            paddingBottom: 8,
+          }}
         >
-          Add Group
-        </Button>
-      </View>
+          <Button
+            block
+            onPress={() =>
+              navigation.navigate("AdminForm", { type: "group", mode: "edit" })
+            }
+          >
+            Add Group
+          </Button>
+        </View>
+      </SafeAreaView>
 
-      {/* Group List */}
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>Existing Groups</Text>
-
-        {groups.length === 0 ? (
-          <Text style={styles.emptyText}>No groups added yet.</Text>
-        ) : (
-          groups.map((g) => {
-            const sub = subcategories.find((s) => s.id === g.subcategory_id);
-            return (
-              <View key={g.id} style={styles.listItem}>
-                <Text style={styles.listText}>
-                  {g.name}{" "}
-                  <Text style={styles.listSubText}>
-                    ({sub?.name || "Unassigned"})
-                  </Text>
-                </Text>
-              </View>
-            );
-          })
-        )}
-      </View>
-    </ScrollView>
+      {/* Delete confirmation bottom sheet */}
+      {deleteId !== null && (
+        <BottomSheet
+          visible
+          title="Delete Group"
+          onClose={() => setDeleteId(null)}
+        >
+          <Text style={{ color: colors.textSecondary }}>
+            Are you sure you want to delete this group?
+          </Text>
+          <Button
+            block
+            style={{ marginTop: spacing.lg }}
+            onPress={confirmDelete}
+            loading={deleting}
+          >
+            Yes, Delete
+          </Button>
+          <Button
+            block
+            variant="secondary"
+            style={{ marginTop: spacing.sm }}
+            onPress={() => setDeleteId(null)}
+          >
+            No, Cancel
+          </Button>
+        </BottomSheet>
+      )}
+    </View>
   );
 }
 
-// ============================================================
-// STYLES
-// ============================================================
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: "#F5F5F5",
-  },
-
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  title: {
-    fontSize: 20,
-    fontWeight: "700",
-    marginBottom: 16,
-  },
-
+  center: { flex: 1, justifyContent: "center", alignItems: "center" },
   card: {
-    backgroundColor: "#FFF",
-    padding: 16,
+    backgroundColor: colors.cardBG,
+    padding: spacing.md,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
-    marginBottom: 20,
-  },
-
-  dropdownLabel: {
-    fontSize: 14,
-    color: "#555",
-    marginBottom: 8,
-  },
-
-  dropdown: {
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 12,
-    overflow: "hidden",
-    marginBottom: 12,
-  },
-
-  option: {
-    justifyContent: "flex-start",
-  },
-
-  optionText: {
-    fontWeight: "normal",
-  },
-
-  input: {
-    backgroundColor: "#FFF",
-    borderWidth: 1,
-    borderColor: "#DDD",
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-
-  subtitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-
-  emptyText: {
-    color: "#777",
-  },
-
-  listItem: {
-    backgroundColor: "#FAFAFA",
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E5E5E5",
-    marginBottom: 8,
-  },
-
-  listText: {
-    fontSize: 16,
-    color: "#333",
-  },
-
-  listSubText: {
-    color: "#777",
-    fontSize: 14,
+    borderColor: colors.border,
+    marginBottom: spacing.lg,
   },
 });

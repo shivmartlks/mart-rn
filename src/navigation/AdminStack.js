@@ -6,6 +6,9 @@ import Header from "../components/Header";
 import EditProfile from "../screens/shared/EditProfile";
 import SubCategories from "../screens/admin/SubCategories";
 import Groups from "../screens/admin/Groups";
+import CategoryView from "../screens/admin/CategoryView";
+import CategoryEdit from "../screens/admin/CategoryEdit";
+import AdminForm from "../screens/admin/AdminForm";
 
 const Stack = createNativeStackNavigator();
 
@@ -36,6 +39,22 @@ export default function AdminStack() {
         name="Groups"
         component={Groups}
         options={{ header: () => <Header title="Product Groups" showBack /> }}
+      />
+
+      <Stack.Screen
+        name="CategoryView"
+        component={CategoryView}
+        options={{ header: () => <Header title="View Category" showBack /> }}
+      />
+      <Stack.Screen
+        name="CategoryEdit"
+        component={CategoryEdit}
+        options={{ header: () => <Header title="Edit Category" showBack /> }}
+      />
+      <Stack.Screen
+        name="AdminForm"
+        component={AdminForm}
+        options={{ header: () => <Header title="Admin Form" showBack /> }}
       />
     </Stack.Navigator>
   );

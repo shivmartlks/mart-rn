@@ -7,6 +7,8 @@ import {
   TouchableWithoutFeedback,
   StyleSheet,
   Text,
+  Dimensions,
+  ScrollView,
 } from "react-native";
 import { colors, spacing, radii, componentTokens, shadows } from "../../theme";
 
@@ -17,7 +19,11 @@ export default function BottomSheet({
   title = "",
   showHeader = true,
   style = {},
+  footer = null,
 }) {
+  const screenHeight = Dimensions.get("window").height;
+  const MAX_SHEET_HEIGHT = Math.round(screenHeight * 0.8);
+
   return (
     <Modal
       visible={visible}
@@ -31,15 +37,30 @@ export default function BottomSheet({
       </TouchableWithoutFeedback>
 
       {/* Sheet Container */}
-      <View style={[styles.sheetContainer, style]}>
+      <View
+        style={[styles.sheetContainer, { maxHeight: MAX_SHEET_HEIGHT }, style]}
+      >
         {/* Drag Handle */}
         <View style={styles.handle} />
 
         {/* Header (optional) */}
         {showHeader && title ? <Text style={styles.title}>{title}</Text> : null}
 
-        {/* Content */}
-        <View style={{ width: "100%", marginTop: spacing.md }}>{children}</View>
+        {/* Content (scrollable) */}
+        <ScrollView
+          style={{ width: "100%", marginTop: spacing.md }}
+          contentContainerStyle={{ paddingBottom: spacing.md }}
+          showsVerticalScrollIndicator={true}
+        >
+          {children}
+        </ScrollView>
+
+        {/* Footer (optional) */}
+        {footer ? (
+          <View style={{ width: "100%", paddingTop: spacing.sm }}>
+            {footer}
+          </View>
+        ) : null}
       </View>
     </Modal>
   );
