@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Alert, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+} from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { supabase } from "../../services/supabase";
 import Card from "../../components/ui/Card";
@@ -140,7 +147,10 @@ export default function AdminForm() {
   }
 
   function setArrayField(key, updater) {
-    setValues((prev) => ({ ...prev, [key]: updater(Array.isArray(prev[key]) ? prev[key] : []) }));
+    setValues((prev) => ({
+      ...prev,
+      [key]: updater(Array.isArray(prev[key]) ? prev[key] : []),
+    }));
   }
 
   function validateFields() {
@@ -213,14 +223,19 @@ export default function AdminForm() {
       if (!Array.isArray(payload.more_info)) payload.more_info = [];
       // Strip empty rows
       payload.images = payload.images.filter((u) => String(u || "").trim());
-      payload.highlights = payload.highlights.filter((r) => String(r?.name || "").trim());
-      payload.more_info = payload.more_info.filter((r) => String(r?.name || "").trim());
+      payload.highlights = payload.highlights.filter((r) =>
+        String(r?.name || "").trim()
+      );
+      payload.more_info = payload.more_info.filter((r) =>
+        String(r?.name || "").trim()
+      );
     } else {
       // For other types keep previous JSON normalization
       ["images", "highlights", "more_info"].forEach((k) => {
         if (payload[k]) {
           try {
-            if (typeof payload[k] === "string") payload[k] = JSON.parse(payload[k]);
+            if (typeof payload[k] === "string")
+              payload[k] = JSON.parse(payload[k]);
           } catch (e) {
             // ignore for non-product types
           }
@@ -276,13 +291,22 @@ export default function AdminForm() {
       <View style={{ marginBottom: spacing.md }}>
         <FieldLabel label="Images" required={false} />
         {arr.map((url, idx) => (
-          <View key={idx} style={{ flexDirection: "row", alignItems: "center", marginBottom: spacing.xs }}>
+          <View
+            key={idx}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: spacing.xs,
+            }}
+          >
             <Input
               placeholder={`Image URL #${idx + 1}`}
               value={url}
               editable={!readOnly}
               onChangeText={(v) =>
-                setArrayField("images", (prev) => prev.map((x, i) => (i === idx ? v : x)))
+                setArrayField("images", (prev) =>
+                  prev.map((x, i) => (i === idx ? v : x))
+                )
               }
               size="md"
               style={{ flex: 1 }}
@@ -292,7 +316,11 @@ export default function AdminForm() {
                 variant="secondary"
                 size="sm"
                 style={{ marginLeft: spacing.xs }}
-                onPress={() => setArrayField("images", (prev) => prev.filter((_, i) => i !== idx))}
+                onPress={() =>
+                  setArrayField("images", (prev) =>
+                    prev.filter((_, i) => i !== idx)
+                  )
+                }
               >
                 Remove
               </Button>
@@ -319,13 +347,22 @@ export default function AdminForm() {
       <View style={{ marginBottom: spacing.md }}>
         <FieldLabel label={label} required={false} />
         {arr.map((row, idx) => (
-          <View key={idx} style={{ flexDirection: "row", alignItems: "center", marginBottom: spacing.xs }}>
+          <View
+            key={idx}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: spacing.xs,
+            }}
+          >
             <Input
               placeholder="Name"
               value={row?.name ?? ""}
               editable={!readOnly}
               onChangeText={(v) =>
-                setArrayField(fieldKey, (prev) => prev.map((x, i) => (i === idx ? { ...x, name: v } : x)))
+                setArrayField(fieldKey, (prev) =>
+                  prev.map((x, i) => (i === idx ? { ...x, name: v } : x))
+                )
               }
               size="md"
               style={{ flex: 1, marginRight: spacing.xs }}
@@ -335,7 +372,9 @@ export default function AdminForm() {
               value={row?.value ?? ""}
               editable={!readOnly}
               onChangeText={(v) =>
-                setArrayField(fieldKey, (prev) => prev.map((x, i) => (i === idx ? { ...x, value: v } : x)))
+                setArrayField(fieldKey, (prev) =>
+                  prev.map((x, i) => (i === idx ? { ...x, value: v } : x))
+                )
               }
               size="md"
               style={{ flex: 1 }}
@@ -345,7 +384,11 @@ export default function AdminForm() {
                 variant="secondary"
                 size="sm"
                 style={{ marginLeft: spacing.xs }}
-                onPress={() => setArrayField(fieldKey, (prev) => prev.filter((_, i) => i !== idx))}
+                onPress={() =>
+                  setArrayField(fieldKey, (prev) =>
+                    prev.filter((_, i) => i !== idx)
+                  )
+                }
               >
                 Remove
               </Button>
@@ -356,7 +399,12 @@ export default function AdminForm() {
           <Button
             variant="secondary"
             size="sm"
-            onPress={() => setArrayField(fieldKey, (prev) => [...prev, { name: "", value: "" }])}
+            onPress={() =>
+              setArrayField(fieldKey, (prev) => [
+                ...prev,
+                { name: "", value: "" },
+              ])
+            }
           >
             Add Row
           </Button>
@@ -551,14 +599,19 @@ export default function AdminForm() {
 
     // Product stock_type toggle
     if (type === "product" && f.key === "stock_type") {
-      const label = values.stock_type === "quantity" ? "Quantity (pcs)" : "Weight (kg)";
+      const label =
+        values.stock_type === "quantity" ? "Quantity (pcs)" : "Weight (kg)";
       return (
         <View style={{ marginBottom: spacing.md }}>
           <FieldLabel label="Stock Type" required={false} />
           <Button
             variant="secondary"
             onPress={() =>
-              !readOnly && setField("stock_type", values.stock_type === "quantity" ? "weight" : "quantity")
+              !readOnly &&
+              setField(
+                "stock_type",
+                values.stock_type === "quantity" ? "weight" : "quantity"
+              )
             }
             disabled={readOnly}
           >
@@ -664,11 +717,17 @@ export default function AdminForm() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.screenBG }}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        style={{ flex: 1 }}
+      >
         {/* Scrollable content with extra bottom padding to avoid overlap with fixed CTA */}
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}
+          contentContainerStyle={{
+            padding: spacing.lg,
+            paddingBottom: spacing.xxl,
+          }}
           keyboardShouldPersistTaps="handled"
         >
           <Card>
