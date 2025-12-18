@@ -216,45 +216,105 @@ export default function AdminForm() {
       payload.user_visibility = !!payload.user_visibility;
     }
 
-    // Normalize product repeater fields
+    // Remove JSONB fields from payload for products
     if (type === "product") {
-      if (!Array.isArray(payload.images)) payload.images = [];
-      if (!Array.isArray(payload.highlights)) payload.highlights = [];
-      if (!Array.isArray(payload.more_info)) payload.more_info = [];
-      // Strip empty rows
-      payload.images = payload.images.filter((u) => String(u || "").trim());
-      payload.highlights = payload.highlights.filter((r) =>
-        String(r?.name || "").trim()
-      );
-      payload.more_info = payload.more_info.filter((r) =>
-        String(r?.name || "").trim()
-      );
-    } else {
-      // For other types keep previous JSON normalization
-      ["images", "highlights", "more_info"].forEach((k) => {
-        if (payload[k]) {
-          try {
-            if (typeof payload[k] === "string")
-              payload[k] = JSON.parse(payload[k]);
-          } catch (e) {
-            // ignore for non-product types
-          }
-        }
-      });
+      delete payload.images;
+      delete payload.highlights;
+      delete payload.more_info;
     }
 
+    // Save core record
     const q = id
       ? supabase.from(table).update(payload).eq("id", id)
-      : supabase.from(table).insert([payload]);
+      : supabase.from(table).insert([payload]).select().maybeSingle();
 
-    const { error } = await q;
-    setSaving(false);
-    if (error) {
-      Alert.alert("Error", error.message || "Failed to save");
+    const result = await q;
+    if (result.error) {
+      setSaving(false);
+      Alert.alert("Error", result.error.message || "Failed to save");
       return;
     }
 
-    // Clear relevant caches so visibility changes reflect immediately
+    // Resolve productId (for new insert get from returning row)
+    const productId =
+      type === "product" ? id || result.data?.id || values.id : null;
+
+    // For products: persist images and attributes
+    if (type === "product" && productId) {
+      try {
+        // Images: delete and insert with sort_order
+        const imagesArr = Array.isArray(values.images)
+          ? values.images.filter((u) => String(u || "").trim())
+          : [];
+        await supabase
+          .from("product_images")
+          .delete()
+          .eq("product_id", productId);
+        if (imagesArr.length > 0) {
+          await supabase
+            .from("product_images")
+            .insert(
+              imagesArr.map((url, idx) => ({
+                product_id: productId,
+                image_url: url,
+                sort_order: idx,
+              }))
+            );
+        }
+
+        // Attributes: delete and insert for highlights and details
+        const highlightsArr = Array.isArray(values.highlights)
+          ? values.highlights
+          : [];
+        const detailsArr = Array.isArray(values.more_info)
+          ? values.more_info
+          : [];
+        await supabase
+          .from("product_attributes")
+          .delete()
+          .eq("product_id", productId);
+        const attrRows = [];
+        // Highlights: key fixed as "highlight"
+        highlightsArr.forEach((h) => {
+          const name = String(h?.name || "").trim();
+          const value = String(h?.value || "").trim();
+          if (name || value) {
+            attrRows.push({
+              product_id: productId,
+              key: "highlight",
+              value,
+              group_key: "highlights",
+            });
+          }
+        });
+        // Details: key is provided name
+        detailsArr.forEach((d) => {
+          const name = String(d?.name || "").trim();
+          const value = String(d?.value || "").trim();
+          if (name) {
+            attrRows.push({
+              product_id: productId,
+              key: name,
+              value,
+              group_key: "details",
+            });
+          }
+        });
+        if (attrRows.length > 0) {
+          await supabase.from("product_attributes").insert(attrRows);
+        }
+      } catch (e) {
+        // Non-fatal: show error but still continue
+        Alert.alert(
+          "Warning",
+          "Saved product, but failed to save images/attributes."
+        );
+      }
+    }
+
+    setSaving(false);
+
+    // Clear caches
     try {
       if (type === "category") {
         cacheClear("categories");
@@ -269,6 +329,7 @@ export default function AdminForm() {
         cacheClear("products");
       } else if (type === "product") {
         cacheClear("products");
+        if (productId) cacheClear(`product:${productId}`);
       }
     } catch {}
 
@@ -803,3 +864,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.screenBG,
   },
 });
+
+async function saveProductAttributes(productId, attributes) {
+  if (!Array.isArray(attributes)) return;
+
+  // Remove old attributes
+  await supabase
+    .from("product_attributes")
+    .delete()
+    .eq("product_id", productId);
+
+  if (attributes.length === 0) return;
+
+  const rows = attributes
+    .map((r) => ({
+      product_id: productId,
+      key: r.name?.trim(),
+      value: r.value?.trim(),
+    }))
+    .filter((r) => r.key && r.value);
+
+  if (rows.length > 0) {
+    await supabase.from("product_attributes").insert(rows);
+  }
+}

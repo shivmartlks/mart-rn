@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { useRoute, useFocusEffect } from "@react-navigation/native";
 import {
@@ -14,7 +15,7 @@ import {
   removeFromCart,
   getCartCount,
 } from "../../services/cartService";
-import { supabase } from "../../services/supabase";
+import { supabase, SUPABASE_URL } from "../../services/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import QuantitySelector from "../../components/ui/QuantitySelector";
 import Button from "../../components/ui/Button";
@@ -23,69 +24,102 @@ import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cacheGet, cacheSet } from "../../services/cache";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { fetchProductWithAttributes } from "../../services/adminApi";
+import { useWindowDimensions } from "react-native";
 
 export default function ProductDetails() {
   const route = useRoute();
   const { user } = useAuth();
-  const product = route.params?.product;
-  const productKey = product?.id ? `product:${product.id}` : null;
+  const productParam = route.params?.product;
+  const productId = productParam?.id;
+  const productKey = productId ? `product:${productId}` : null;
   const cartQtyKey =
-    product?.id && user?.id ? `cartqty:${user.id}:${product.id}` : null;
+    productId && user?.id ? `cartqty:${user.id}:${productId}` : null;
+  const [viewProduct, setViewProduct] = useState(productParam || null);
   const [qty, setQty] = useState(0);
   const [cartCount, setCartCount] = useState(0);
   const insets = useSafeAreaInsets();
   const FOOTER_HEIGHT = 64; // approx footer CTA height
   const EXTRA_BOTTOM_SPACING = 8; // additional spacing requested
-
-  const images =
-    Array.isArray(product?.images) && product.images.length > 0
-      ? product.images
-      : product?.image_url
-      ? [product.image_url]
-      : [];
-
-  const isOutOfStock = Number(product?.stock_value) <= 0;
-  const limitedQty = Number(product?.stock_value) <= 5 && !isOutOfStock;
-  const discountPercent =
-    product?.discount_percent ??
-    (product?.mrp
-      ? Math.max(
-          0,
-          Math.round(((product.mrp - product.price) / product.mrp) * 100)
-        )
-      : 0);
-
   const [showMoreInfo, setShowMoreInfo] = useState(false);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const { width: screenWidth } = useWindowDimensions();
+
+  function normalizeImageUrl(u) {
+    if (!u) return "";
+    const x = String(u).trim();
+    if (x.startsWith("https://") || x.startsWith("http://")) return x;
+    if (x.startsWith("/")) return `${SUPABASE_URL}${x}`;
+    if (x.startsWith("storage/v1/object/public")) return `${SUPABASE_URL}/${x}`;
+    if (x.startsWith("public/"))
+      return `${SUPABASE_URL}/storage/v1/object/${x}`;
+    return x;
+  }
 
   useEffect(() => {
-    // Cache product object for faster re-entry
-    if (productKey && product) cacheSet(productKey, product);
-  }, [productKey, product]);
+    async function init() {
+      if (!productId) return;
+      // Prefer cached merged product if available
+      const cached = productKey ? cacheGet(productKey) : null;
+      if (cached) {
+        setViewProduct(cached);
+        return;
+      }
+      // Otherwise fetch from DB and cache merged product
+      const [{ data, error }, imagesRes] = await Promise.all([
+        fetchProductWithAttributes(productId),
+        supabase
+          .from("product_images")
+          .select("image_url, sort_order")
+          .eq("product_id", productId)
+          .order("sort_order"),
+      ]);
+      if (error || !data?.product) return;
+      const { product, attributes } = data;
+      const highlights = (attributes || [])
+        .filter((a) => a.group_key === "highlights")
+        .map((a) => ({ name: a.key, value: a.value }));
+      const moreInfo = (attributes || [])
+        .filter((a) => a.group_key === "details")
+        .map((a) => ({ name: a.key, value: a.value }));
+      const images = Array.isArray(imagesRes?.data)
+        ? imagesRes.data
+            .map((i) => ({ uri: normalizeImageUrl(i.image_url) }))
+            .filter((o) => !!o.uri)
+        : [];
+      const finalProduct = {
+        ...product,
+        images,
+        highlights,
+        more_info: moreInfo,
+      };
+      setViewProduct(finalProduct);
+      if (productKey) cacheSet(productKey, finalProduct);
+    }
+    init();
+  }, [productId]);
 
   async function fetchQuantity() {
-    if (!user || !product?.id) return;
-
-    // Try cache first
+    if (!user || !productId) return;
     const cachedQty = cartQtyKey ? cacheGet(cartQtyKey) : undefined;
     if (typeof cachedQty === "number") {
       setQty(cachedQty);
       return;
     }
-
     const { data } = await supabase
       .from("cart_items")
       .select("quantity, products(stock_value)")
       .eq("user_id", user.id)
-      .eq("product_id", product.id)
+      .eq("product_id", productId)
       .maybeSingle();
     const q = data?.quantity || 0;
     setQty(q);
-    if (cartQtyKey) cacheSet(cartQtyKey, q, 2 * 60 * 1000); // 2 min TTL
+    if (cartQtyKey) cacheSet(cartQtyKey, q, 2 * 60 * 1000);
   }
 
   useEffect(() => {
     fetchQuantity();
-  }, [product, user]);
+  }, [productId, user]);
 
   useEffect(() => {
     async function loadCartCount() {
@@ -107,12 +141,12 @@ export default function ProductDetails() {
         fetchQuantity();
       }
       refresh();
-    }, [user, product])
+    }, [user, productId])
   );
 
   const handleAdd = async () => {
     if (!user) return;
-    await addToCart(product.id, user.id);
+    await addToCart(productId, user.id);
     // Update qty and cache immediately
     const newQty = qty + 1;
     setQty(newQty);
@@ -120,11 +154,26 @@ export default function ProductDetails() {
   };
   const handleRemove = async () => {
     if (qty === 0) return;
-    await removeFromCart(product.id, user.id);
+    await removeFromCart(productId, user.id);
     const newQty = Math.max(0, qty - 1);
     setQty(newQty);
     if (cartQtyKey) cacheSet(cartQtyKey, newQty, 2 * 60 * 1000);
   };
+
+  const images = Array.isArray(viewProduct?.images) ? viewProduct.images : [];
+
+  const isOutOfStock = Number(viewProduct?.stock_value) <= 0;
+  const limitedQty = Number(viewProduct?.stock_value) <= 5 && !isOutOfStock;
+  const discountPercent =
+    viewProduct?.discount_percent ??
+    (viewProduct?.mrp
+      ? Math.max(
+          0,
+          Math.round(
+            ((viewProduct.mrp - viewProduct.price) / viewProduct.mrp) * 100
+          )
+        )
+      : 0);
 
   return (
     <View style={styles.screen}>
@@ -137,31 +186,58 @@ export default function ProductDetails() {
         {/* Section 1: Image / Carousel (reduced height) */}
         <View style={styles.carouselWrap}>
           {images.length > 1 ? (
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-            >
-              {images.map((uri, idx) => (
-                <Image key={idx} source={{ uri }} style={styles.productImage} />
-              ))}
-            </ScrollView>
+            <>
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                style={{ width: screenWidth }}
+                onScroll={(e) => {
+                  const x = e.nativeEvent.contentOffset.x;
+                  const w =
+                    e.nativeEvent.layoutMeasurement.width || screenWidth;
+                  const idx = Math.round(x / Math.max(1, w));
+                  if (idx !== activeImageIdx) setActiveImageIdx(idx);
+                }}
+                scrollEventThrottle={16}
+              >
+                {images.map((img, idx) => (
+                  <Image
+                    key={idx}
+                    source={{ uri: img.uri }}
+                    style={[styles.productImage, { width: screenWidth }]}
+                    resizeMode="cover"
+                  />
+                ))}
+              </ScrollView>
+              <View style={styles.pagerDotsWrap}>
+                {images.map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.pagerDot,
+                      i === activeImageIdx ? styles.pagerDotActive : null,
+                    ]}
+                  />
+                ))}
+              </View>
+            </>
           ) : (
             <Image
-              source={images[0] ? { uri: images[0] } : IMAGES.default}
-              style={styles.productImage}
+              source={images[0]?.uri ? { uri: images[0].uri } : IMAGES.default}
+              style={[styles.productImage, { width: screenWidth }]}
             />
           )}
         </View>
 
         {/* Section 2: Product name, price, discount, stock/qty alerts */}
         <View style={styles.detailsBox}>
-          <Text style={styles.name}>{product.name}</Text>
+          <Text style={styles.name}>{viewProduct?.name || ""}</Text>
 
           <View style={styles.priceRow}>
-            <Text style={styles.price}>₹{product.price}</Text>
-            {product.mrp ? (
-              <Text style={styles.mrp}>₹{product.mrp}</Text>
+            <Text style={styles.price}>₹{viewProduct?.price ?? "--"}</Text>
+            {viewProduct?.mrp ? (
+              <Text style={styles.mrp}>₹{viewProduct.mrp}</Text>
             ) : null}
             {discountPercent > 0 ? (
               <Text style={styles.discountTag}>{discountPercent}% OFF</Text>
@@ -170,15 +246,15 @@ export default function ProductDetails() {
 
           {limitedQty ? (
             <Text style={styles.limited}>
-              Limited stock: only {product.stock_value} left
+              Limited stock: only {viewProduct?.stock_value} left
             </Text>
           ) : null}
           {isOutOfStock ? (
             <Text style={styles.outOfStock}>Out of stock</Text>
           ) : null}
 
-          {product.short_desc ? (
-            <Text style={styles.short}>{product.short_desc}</Text>
+          {viewProduct?.short_desc ? (
+            <Text style={styles.short}>{viewProduct.short_desc}</Text>
           ) : null}
         </View>
 
@@ -199,10 +275,11 @@ export default function ProductDetails() {
         </View>
 
         {/* Section 4: Highlights (Name-Value list in Card) */}
-        {Array.isArray(product?.highlights) && product.highlights.length > 0 ? (
+        {Array.isArray(viewProduct?.highlights) &&
+        viewProduct.highlights.length > 0 ? (
           <View style={styles.cardBox}>
             <Text style={styles.cardTitle}>Highlights</Text>
-            {product.highlights.map((h, idx) => (
+            {viewProduct.highlights.map((h, idx) => (
               <View key={idx} style={styles.nvRow}>
                 <Text style={styles.nvName}>{h.name}</Text>
                 <Text style={styles.nvValue}>{h.value}</Text>
@@ -212,7 +289,8 @@ export default function ProductDetails() {
         ) : null}
 
         {/* Section 5: More Info (collapsible) */}
-        {Array.isArray(product?.more_info) && product.more_info.length > 0 ? (
+        {Array.isArray(viewProduct?.more_info) &&
+        viewProduct.more_info.length > 0 ? (
           <View style={styles.cardBox}>
             <TouchableOpacity onPress={() => setShowMoreInfo((s) => !s)}>
               <Text style={styles.cardTitle}>
@@ -221,7 +299,7 @@ export default function ProductDetails() {
             </TouchableOpacity>
             {showMoreInfo && (
               <View>
-                {product.more_info.map((m, idx) => (
+                {viewProduct.more_info.map((m, idx) => (
                   <View key={idx} style={styles.nvRow}>
                     <Text style={styles.nvName}>{m.name}</Text>
                     <Text style={styles.nvValue}>{m.value}</Text>
@@ -233,10 +311,10 @@ export default function ProductDetails() {
         ) : null}
 
         {/* About section preserved below more info */}
-        {product.description ? (
+        {viewProduct?.description ? (
           <View style={styles.cardBox}>
             <Text style={styles.cardTitle}>About this item</Text>
-            <Text style={styles.description}>{product.description}</Text>
+            <Text style={styles.description}>{viewProduct.description}</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -287,7 +365,9 @@ export default function ProductDetails() {
           <Button
             block
             onPress={handleAdd}
-            disabled={isOutOfStock || qty >= product.stock_value}
+            disabled={
+              isOutOfStock || qty >= (Number(viewProduct?.stock_value) || 0)
+            }
           >
             Add to Cart
           </Button>
@@ -302,7 +382,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 220 },
   carouselWrap: { width: "100%", backgroundColor: colors.cardSoft },
   productImage: {
-    width: "100%",
     height: 240,
     backgroundColor: colors.cardSoft,
   },
@@ -429,5 +508,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.sm,
+  },
+
+  pagerDotsWrap: {
+    position: "absolute",
+    bottom: 8,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  pagerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+  },
+  pagerDotActive: {
+    backgroundColor: colors.primary,
   },
 });

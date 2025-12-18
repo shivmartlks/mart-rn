@@ -12,10 +12,7 @@ export async function fetchCategories() {
 
 // Get sub categories
 export async function fetchSubCategories() {
-  return supabase
-  .from("product_subcategories")
-  .select("*")
-  .order("name");
+  return supabase.from("product_subcategories").select("*").order("name");
 }
 
 // export async function fetchSubCategories(categoryId) {
@@ -36,7 +33,7 @@ export async function fetchSubCategories() {
 
 // Get groups
 export async function fetchGroups() {
-  return supabase.from('product_groups').select('*')
+  return supabase.from("product_groups").select("*");
 }
 
 // export async function fetchProducts(groupIds) {
@@ -49,18 +46,15 @@ export async function fetchGroups() {
 
 // Get products
 export async function fetchProducts() {
-  return supabase
-  .from("products")
-  .select("*")
-  .order("name");
+  return supabase.from("products").select("*").order("name");
 }
 
 // Fetch cart
 export async function fetchCart(user) {
   return supabase
-      .from("cart_items")
-      .select(
-        `
+    .from("cart_items")
+    .select(
+      `
         id,
         quantity,
         product_id,
@@ -68,17 +62,30 @@ export async function fetchCart(user) {
           id, name, price, mrp, image_url, stock_unit, stock_type
         )
       `
-      )
-      .eq("user_id", user.id);
+    )
+    .eq("user_id", user.id);
 }
 
 // Load cart
 export async function fetchCartUser(user) {
   return supabase
-  .from("cart_items")
-  .select("id, quantity, products(name, price, image_url)")
-  .eq("user_id", user.id);
+    .from("cart_items")
+    .select("id, quantity, products(name, price, image_url)")
+    .eq("user_id", user.id);
 }
 
+// Get single product with attributes
+export async function fetchProductWithAttributes(productId) {
+  const [prodRes, attrRes] = await Promise.all([
+    supabase.from("products").select("*").eq("id", productId).maybeSingle(),
+    supabase
+      .from("product_attributes")
+      .select("key, value, group_key")
+      .eq("product_id", productId),
+  ]);
 
-
+  const error = prodRes.error || attrRes.error || null;
+  const product = prodRes.data || null;
+  const attributes = attrRes.data || [];
+  return { data: { product, attributes }, error };
+}
