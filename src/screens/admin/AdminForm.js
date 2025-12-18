@@ -48,24 +48,12 @@ const FIELD_CONFIG = {
   product: [
     { key: "name", label: "Product Name", type: "text", required: true },
     { key: "short_desc", label: "Short Description", type: "text" },
-    { key: "description", label: "Description", type: "text" },
     { key: "mrp", label: "MRP", type: "number" },
     { key: "price", label: "Selling Price", type: "number", required: true },
     { key: "stock_value", label: "Stock Quantity", type: "number" },
     { key: "stock_type", label: "Stock Type", type: "text" },
     { key: "stock_unit", label: "Stock Unit", type: "text" },
     { key: "group_id", label: "Group ID", type: "text", required: true },
-    { key: "images", label: "Images (JSON array)", type: "json" },
-    {
-      key: "highlights",
-      label: "Highlights (JSON array of {name,value})",
-      type: "json",
-    },
-    {
-      key: "more_info",
-      label: "More Info (JSON array of {name,value})",
-      type: "json",
-    },
     { key: "user_visibility", label: "Visible to users", type: "boolean" },
   ],
 };
@@ -92,6 +80,9 @@ export default function AdminForm() {
   const [showSubcatPicker, setShowSubcatPicker] = useState(false);
   const [showGroupPicker, setShowGroupPicker] = useState(false);
   const [originalValues, setOriginalValues] = useState({});
+  // Product-only extra UI state
+  const [adminMoreOpen, setAdminMoreOpen] = useState(false);
+  const [specsDupError, setSpecsDupError] = useState("");
 
   useEffect(() => {
     if (id) load();
@@ -112,19 +103,63 @@ export default function AdminForm() {
       .select("*")
       .eq("id", id)
       .maybeSingle();
-    setLoading(false);
+
     if (error) {
+      setLoading(false);
       Alert.alert("Error", `Failed to load ${type}`);
       return;
     }
-    setValues({
+
+    // Base values from core table
+    const base = {
       ...data,
       user_visibility: !!data?.user_visibility,
-    });
-    setOriginalValues({
-      ...data,
-      user_visibility: !!data?.user_visibility,
-    });
+    };
+
+    // Prefill extras for product edit
+    if (type === "product" && id) {
+      const [imgRes, attrRes] = await Promise.all([
+        supabase
+          .from("product_images")
+          .select("image_url, sort_order")
+          .eq("product_id", id)
+          .order("sort_order"),
+        supabase
+          .from("product_attributes")
+          .select("key, value, group_key")
+          .eq("product_id", id),
+      ]);
+
+      const images = Array.isArray(imgRes?.data)
+        ? imgRes.data
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+            .map((r) => String(r.image_url || ""))
+        : [];
+
+      const highlights = [];
+      const more_info = [];
+      let descriptionText = "";
+      let nutritionText = "";
+      (attrRes?.data || []).forEach((r) => {
+        const g = r?.group_key;
+        const k = String(r?.key || "").trim();
+        const v = String(r?.value || "").trim();
+        if (g === "highlights" && v) highlights.push(v);
+        else if (g === "details" && k) more_info.push({ name: k, value: v });
+        else if (g === "description" && v) descriptionText = v;
+        else if (g === "nutrition" && v) nutritionText = v;
+      });
+
+      base.images = images;
+      base.highlights = highlights;
+      base.more_info = more_info;
+      base.descriptionText = descriptionText;
+      base.nutritionText = nutritionText;
+    }
+
+    setValues(base);
+    setOriginalValues(base);
+    setLoading(false);
   }
 
   async function loadCategories() {
@@ -153,6 +188,25 @@ export default function AdminForm() {
     }));
   }
 
+  function validateProductSpecs() {
+    // Prevent duplicate spec keys (case/trim insensitive) at UI-level
+    const specs = Array.isArray(values.more_info) ? values.more_info : [];
+    const seen = new Set();
+    for (const row of specs) {
+      const name = String(row?.name || "")
+        .trim()
+        .toLowerCase();
+      if (!name) continue;
+      if (seen.has(name)) {
+        setSpecsDupError("Duplicate specification keys are not allowed.");
+        return false;
+      }
+      seen.add(name);
+    }
+    setSpecsDupError("");
+    return true;
+  }
+
   function validateFields() {
     const fields = FIELD_CONFIG[type] || [];
     // Required checks
@@ -178,12 +232,47 @@ export default function AdminForm() {
     if (type === "subcategory" && !values.category_id) return false;
     if (type === "group" && !values.subcategory_id) return false;
     if (type === "product" && !values.group_id) return false;
+
+    // Product-specific: prevent duplicate spec keys
+    if (type === "product") {
+      if (!validateProductSpecs()) return false;
+    }
+
     return true;
   }
 
   function isDirty() {
     // In add mode, treat as dirty when any required field has a value
     if (!id) return validateFields();
+    // For product, shallow compare core fields + extras we manage
+    if (type === "product") {
+      const keysToCompare = [
+        "name",
+        "short_desc",
+        "mrp",
+        "price",
+        "stock_value",
+        "stock_type",
+        "stock_unit",
+        "group_id",
+        "user_visibility",
+        // extras
+        "images",
+        "highlights",
+        "more_info",
+        "descriptionText",
+        "nutritionText",
+      ];
+      for (const k of keysToCompare) {
+        const a = values[k];
+        const b = originalValues[k];
+        const sa = JSON.stringify(a ?? null);
+        const sb = JSON.stringify(b ?? null);
+        if (sa !== sb) return true;
+      }
+      return false;
+    }
+
     const fields = FIELD_CONFIG[type] || [];
     for (const f of fields) {
       const a = values[f.key];
@@ -216,11 +305,13 @@ export default function AdminForm() {
       payload.user_visibility = !!payload.user_visibility;
     }
 
-    // Remove JSONB fields from payload for products
+    // Remove non-core fields from payload for products (images/highlights/specs/long text)
     if (type === "product") {
       delete payload.images;
       delete payload.highlights;
       delete payload.more_info;
+      delete payload.descriptionText;
+      delete payload.nutritionText;
     }
 
     // Save core record
@@ -244,50 +335,49 @@ export default function AdminForm() {
       try {
         // Images: delete and insert with sort_order
         const imagesArr = Array.isArray(values.images)
-          ? values.images.filter((u) => String(u || "").trim())
+          ? values.images.map((u) => String(u || "").trim()).filter((u) => !!u)
           : [];
         await supabase
           .from("product_images")
           .delete()
           .eq("product_id", productId);
         if (imagesArr.length > 0) {
-          await supabase
-            .from("product_images")
-            .insert(
-              imagesArr.map((url, idx) => ({
-                product_id: productId,
-                image_url: url,
-                sort_order: idx,
-              }))
-            );
+          await supabase.from("product_images").insert(
+            imagesArr.map((url, idx) => ({
+              product_id: productId,
+              image_url: url,
+              sort_order: idx,
+            }))
+          );
         }
 
-        // Attributes: delete and insert for highlights and details
-        const highlightsArr = Array.isArray(values.highlights)
-          ? values.highlights
-          : [];
-        const detailsArr = Array.isArray(values.more_info)
-          ? values.more_info
-          : [];
+        // Attributes: delete and insert
         await supabase
           .from("product_attributes")
           .delete()
           .eq("product_id", productId);
+
         const attrRows = [];
-        // Highlights: key fixed as "highlight"
-        highlightsArr.forEach((h) => {
-          const name = String(h?.name || "").trim();
-          const value = String(h?.value || "").trim();
-          if (name || value) {
-            attrRows.push({
-              product_id: productId,
-              key: "highlight",
-              value,
-              group_key: "highlights",
-            });
-          }
+
+        // Highlights (single-line text repeater)
+        const highlightsArr = Array.isArray(values.highlights)
+          ? values.highlights
+              .map((h) => String(h || "").trim())
+              .filter((h) => !!h)
+          : [];
+        highlightsArr.forEach((value) => {
+          attrRows.push({
+            product_id: productId,
+            key: "highlight",
+            value,
+            group_key: "highlights",
+          });
         });
-        // Details: key is provided name
+
+        // Specifications (key/value) with duplicate prevention already in validation)
+        const detailsArr = Array.isArray(values.more_info)
+          ? values.more_info
+          : [];
         detailsArr.forEach((d) => {
           const name = String(d?.name || "").trim();
           const value = String(d?.value || "").trim();
@@ -300,6 +390,29 @@ export default function AdminForm() {
             });
           }
         });
+
+        // Description (single long text, optional)
+        const descriptionText = String(values.descriptionText || "").trim();
+        if (descriptionText) {
+          attrRows.push({
+            product_id: productId,
+            key: "description",
+            value: descriptionText,
+            group_key: "description",
+          });
+        }
+
+        // Nutrition info (single long text, optional)
+        const nutritionText = String(values.nutritionText || "").trim();
+        if (nutritionText) {
+          attrRows.push({
+            product_id: productId,
+            key: "nutrition_info",
+            value: nutritionText,
+            group_key: "nutrition",
+          });
+        }
+
         if (attrRows.length > 0) {
           await supabase.from("product_attributes").insert(attrRows);
         }
@@ -373,12 +486,102 @@ export default function AdminForm() {
               style={{ flex: 1 }}
             />
             {!readOnly && (
+              <>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  style={{ marginLeft: spacing.xs }}
+                  onPress={() =>
+                    setArrayField("images", (prev) => {
+                      if (idx <= 0) return prev;
+                      const copy = [...prev];
+                      const [it] = copy.splice(idx, 1);
+                      copy.splice(idx - 1, 0, it);
+                      return copy;
+                    })
+                  }
+                >
+                  Up
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  style={{ marginLeft: spacing.xs }}
+                  onPress={() =>
+                    setArrayField("images", (prev) => {
+                      if (idx >= prev.length - 1) return prev;
+                      const copy = [...prev];
+                      const [it] = copy.splice(idx, 1);
+                      copy.splice(idx + 1, 0, it);
+                      return copy;
+                    })
+                  }
+                >
+                  Down
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  style={{ marginLeft: spacing.xs }}
+                  onPress={() =>
+                    setArrayField("images", (prev) =>
+                      prev.filter((_, i) => i !== idx)
+                    )
+                  }
+                >
+                  Remove
+                </Button>
+              </>
+            )}
+          </View>
+        ))}
+        {!readOnly && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onPress={() => setArrayField("images", (prev) => [...prev, ""])}
+          >
+            Add Image
+          </Button>
+        )}
+      </View>
+    );
+  }
+
+  function TextRepeater({ fieldKey, label, placeholder = "Text" }) {
+    const readOnly = mode === "view";
+    const arr = Array.isArray(values[fieldKey]) ? values[fieldKey] : [];
+    return (
+      <View style={{ marginBottom: spacing.md }}>
+        <FieldLabel label={label} required={false} />
+        {arr.map((row, idx) => (
+          <View
+            key={idx}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              marginBottom: spacing.xs,
+            }}
+          >
+            <Input
+              placeholder={placeholder}
+              value={String(row ?? "")}
+              editable={!readOnly}
+              onChangeText={(v) =>
+                setArrayField(fieldKey, (prev) =>
+                  prev.map((x, i) => (i === idx ? v : x))
+                )
+              }
+              size="md"
+              style={{ flex: 1 }}
+            />
+            {!readOnly && (
               <Button
                 variant="secondary"
                 size="sm"
                 style={{ marginLeft: spacing.xs }}
                 onPress={() =>
-                  setArrayField("images", (prev) =>
+                  setArrayField(fieldKey, (prev) =>
                     prev.filter((_, i) => i !== idx)
                   )
                 }
@@ -392,9 +595,9 @@ export default function AdminForm() {
           <Button
             variant="secondary"
             size="sm"
-            onPress={() => setArrayField("images", (prev) => [...prev, ""])}
+            onPress={() => setArrayField(fieldKey, (prev) => [...prev, ""])}
           >
-            Add Image
+            Add Row
           </Button>
         )}
       </View>
@@ -470,6 +673,11 @@ export default function AdminForm() {
             Add Row
           </Button>
         )}
+        {specsDupError && fieldKey === "more_info" ? (
+          <Text style={{ color: colors.danger, marginTop: spacing.xs }}>
+            {specsDupError}
+          </Text>
+        ) : null}
       </View>
     );
   }
@@ -682,17 +890,6 @@ export default function AdminForm() {
       );
     }
 
-    // Product repeats
-    if (type === "product" && f.key === "images") {
-      return <ImageRepeater />;
-    }
-    if (type === "product" && f.key === "highlights") {
-      return <NVRepeater fieldKey="highlights" label="Highlights" />;
-    }
-    if (type === "product" && f.key === "more_info") {
-      return <NVRepeater fieldKey="more_info" label="More Info" />;
-    }
-
     switch (f.type) {
       case "text":
         return (
@@ -791,11 +988,136 @@ export default function AdminForm() {
           }}
           keyboardShouldPersistTaps="handled"
         >
-          <Card>
-            {fields.map((f) => (
-              <View key={f.key}>{renderField(f)}</View>
-            ))}
-          </Card>
+          {/* Product: custom sectioned UI */}
+          {type === "product" ? (
+            <>
+              <Card>
+                <Text
+                  style={{
+                    fontWeight: fontWeights.semibold,
+                    color: colors.textPrimary,
+                    marginBottom: spacing.md,
+                  }}
+                >
+                  Basic Info
+                </Text>
+                {fields
+                  .filter((f) =>
+                    [
+                      "name",
+                      "short_desc",
+                      "mrp",
+                      "price",
+                      "stock_value",
+                      "stock_type",
+                      "stock_unit",
+                      "group_id",
+                      "user_visibility",
+                    ].includes(f.key)
+                  )
+                  .map((f) => (
+                    <View key={f.key}>{renderField(f)}</View>
+                  ))}
+              </Card>
+
+              <View style={{ height: spacing.md }} />
+
+              <Card>
+                <Text
+                  style={{
+                    fontWeight: fontWeights.semibold,
+                    color: colors.textPrimary,
+                    marginBottom: spacing.md,
+                  }}
+                >
+                  Images
+                </Text>
+                <ImageRepeater />
+              </Card>
+
+              <View style={{ height: spacing.md }} />
+
+              <Card>
+                <Text
+                  style={{
+                    fontWeight: fontWeights.semibold,
+                    color: colors.textPrimary,
+                    marginBottom: spacing.md,
+                  }}
+                >
+                  Highlights
+                </Text>
+                <TextRepeater
+                  fieldKey="highlights"
+                  label="Highlights"
+                  placeholder="Highlight"
+                />
+              </Card>
+
+              <View style={{ height: spacing.md }} />
+
+              <Card>
+                <Text
+                  style={{
+                    fontWeight: fontWeights.semibold,
+                    color: colors.textPrimary,
+                    marginBottom: spacing.md,
+                  }}
+                >
+                  Specifications
+                </Text>
+                <NVRepeater fieldKey="more_info" label="Specifications" />
+              </Card>
+
+              <View style={{ height: spacing.md }} />
+
+              <Card>
+                <Button
+                  variant="secondary"
+                  onPress={() => setAdminMoreOpen((s) => !s)}
+                >
+                  {adminMoreOpen ? "Hide more info" : "Add more info"}
+                </Button>
+
+                {adminMoreOpen && (
+                  <View style={{ marginTop: spacing.md }}>
+                    <View style={{ marginBottom: spacing.md }}>
+                      <FieldLabel label="Description" required={false} />
+                      <Input
+                        placeholder="Description"
+                        value={values.descriptionText ?? ""}
+                        onChangeText={(v) => setField("descriptionText", v)}
+                        multiline
+                        size="md"
+                        style={{ minHeight: 100 }}
+                      />
+                    </View>
+
+                    <View style={{ marginBottom: spacing.sm }}>
+                      <FieldLabel
+                        label="Nutrition info (optional)"
+                        required={false}
+                      />
+                      <Input
+                        placeholder="Nutrition info"
+                        value={values.nutritionText ?? ""}
+                        onChangeText={(v) => setField("nutritionText", v)}
+                        multiline
+                        size="md"
+                        style={{ minHeight: 80 }}
+                      />
+                    </View>
+                  </View>
+                )}
+              </Card>
+            </>
+          ) : (
+            <Card>
+              {fields.map((f) => (
+                <View key={f.key}>{renderField(f)}</View>
+              ))}
+            </Card>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 

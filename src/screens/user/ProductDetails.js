@@ -7,7 +7,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
 } from "react-native";
 import { useRoute, useFocusEffect } from "@react-navigation/native";
 import {
@@ -42,6 +41,7 @@ export default function ProductDetails() {
   const FOOTER_HEIGHT = 64; // approx footer CTA height
   const EXTRA_BOTTOM_SPACING = 8; // additional spacing requested
   const [showMoreInfo, setShowMoreInfo] = useState(false);
+  const [attributesLoading, setAttributesLoading] = useState(false);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const { width: screenWidth } = useWindowDimensions();
 
@@ -56,48 +56,89 @@ export default function ProductDetails() {
     return x;
   }
 
+  function normalizeAttributes(rows) {
+    const res = { highlights: [], specs: [], description: "", nutrition: "" };
+    if (!Array.isArray(rows)) return res;
+    rows.forEach((r) => {
+      const g = r?.group_key;
+      const key = String(r?.key ?? "").trim();
+      const val = String(r?.value ?? "").trim();
+      if (!g) return;
+      if (g === "highlights") {
+        if (val) res.highlights.push(val);
+      } else if (g === "details") {
+        if (key && val) res.specs.push({ name: key, value: val });
+      } else if (g === "description") {
+        if (val) res.description = val;
+      } else if (g === "nutrition") {
+        if (val) res.nutrition = val;
+      }
+    });
+    return res;
+  }
+
   useEffect(() => {
     async function init() {
       if (!productId) return;
-      // Prefer cached merged product if available
       const cached = productKey ? cacheGet(productKey) : null;
       if (cached) {
         setViewProduct(cached);
         return;
       }
-      // Otherwise fetch from DB and cache merged product
-      const [{ data, error }, imagesRes] = await Promise.all([
-        fetchProductWithAttributes(productId),
+      // Fetch only core product and images
+      const [prodRes, imgRes] = await Promise.all([
+        supabase.from("products").select("*").eq("id", productId).maybeSingle(),
         supabase
           .from("product_images")
           .select("image_url, sort_order")
           .eq("product_id", productId)
           .order("sort_order"),
       ]);
-      if (error || !data?.product) return;
-      const { product, attributes } = data;
-      const highlights = (attributes || [])
-        .filter((a) => a.group_key === "highlights")
-        .map((a) => ({ name: a.key, value: a.value }));
-      const moreInfo = (attributes || [])
-        .filter((a) => a.group_key === "details")
-        .map((a) => ({ name: a.key, value: a.value }));
-      const images = Array.isArray(imagesRes?.data)
-        ? imagesRes.data
+      if (prodRes.error || !prodRes.data) return;
+      const product = prodRes.data;
+      const images = Array.isArray(imgRes?.data)
+        ? imgRes.data
             .map((i) => ({ uri: normalizeImageUrl(i.image_url) }))
             .filter((o) => !!o.uri)
         : [];
-      const finalProduct = {
-        ...product,
-        images,
-        highlights,
-        more_info: moreInfo,
-      };
+      const finalProduct = { ...product, images };
       setViewProduct(finalProduct);
       if (productKey) cacheSet(productKey, finalProduct);
     }
     init();
   }, [productId]);
+
+  async function loadAttributesIfNeeded() {
+    if (!productId) return;
+    const already = viewProduct?.attributes;
+    if (
+      already &&
+      (already.highlights?.length ||
+        already.specs?.length ||
+        already.description ||
+        already.nutrition)
+    ) {
+      return;
+    }
+    const cached = productKey ? cacheGet(productKey) : null;
+    if (cached?.attributes) {
+      setViewProduct((p) => ({ ...(p || {}), attributes: cached.attributes }));
+      return;
+    }
+    setAttributesLoading(true);
+    const { data, error } = await supabase
+      .from("product_attributes")
+      .select("key, value, group_key")
+      .eq("product_id", productId);
+    const attrs = normalizeAttributes(error ? [] : data);
+    setViewProduct((p) => {
+      const merged = { ...(p || {}), attributes: attrs };
+      if (productKey)
+        cacheSet(productKey, { ...(cached || p || {}), attributes: attrs });
+      return merged;
+    });
+    setAttributesLoading(false);
+  }
 
   async function fetchQuantity() {
     if (!user || !productId) return;
@@ -161,6 +202,7 @@ export default function ProductDetails() {
   };
 
   const images = Array.isArray(viewProduct?.images) ? viewProduct.images : [];
+  const attrs = viewProduct?.attributes;
 
   const isOutOfStock = Number(viewProduct?.stock_value) <= 0;
   const limitedQty = Number(viewProduct?.stock_value) <= 5 && !isOutOfStock;
@@ -274,49 +316,81 @@ export default function ProductDetails() {
           </View>
         </View>
 
-        {/* Section 4: Highlights (Name-Value list in Card) */}
-        {Array.isArray(viewProduct?.highlights) &&
-        viewProduct.highlights.length > 0 ? (
-          <View style={styles.cardBox}>
-            <Text style={styles.cardTitle}>Highlights</Text>
-            {viewProduct.highlights.map((h, idx) => (
-              <View key={idx} style={styles.nvRow}>
-                <Text style={styles.nvName}>{h.name}</Text>
-                <Text style={styles.nvValue}>{h.value}</Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
+        {/* More product details toggle */}
+        <View style={styles.cardBox}>
+          {!showMoreInfo ? (
+            <Button
+              onPress={async () => {
+                await loadAttributesIfNeeded();
+                setShowMoreInfo(true);
+              }}
+            >
+              More product details
+            </Button>
+          ) : (
+            <>
+              {attributesLoading && (
+                <Text style={{ color: colors.textSecondary }}>
+                  Loading details...
+                </Text>
+              )}
+              {!attributesLoading && (
+                <View>
+                  {/* Highlights (bulleted) */}
+                  {Array.isArray(attrs?.highlights) &&
+                    attrs.highlights.length > 0 && (
+                      <View style={{ marginBottom: spacing.md }}>
+                        <Text style={styles.cardTitle}>Highlights</Text>
+                        {attrs.highlights.map((h, idx) => (
+                          <Text
+                            key={idx}
+                            style={{
+                              color: colors.textPrimary,
+                              marginVertical: 2,
+                            }}
+                          >
+                            {"\u2022 "}
+                            {h}
+                          </Text>
+                        ))}
+                      </View>
+                    )}
 
-        {/* Section 5: More Info (collapsible) */}
-        {Array.isArray(viewProduct?.more_info) &&
-        viewProduct.more_info.length > 0 ? (
-          <View style={styles.cardBox}>
-            <TouchableOpacity onPress={() => setShowMoreInfo((s) => !s)}>
-              <Text style={styles.cardTitle}>
-                More Info {showMoreInfo ? "▲" : "▼"}
-              </Text>
-            </TouchableOpacity>
-            {showMoreInfo && (
-              <View>
-                {viewProduct.more_info.map((m, idx) => (
-                  <View key={idx} style={styles.nvRow}>
-                    <Text style={styles.nvName}>{m.name}</Text>
-                    <Text style={styles.nvValue}>{m.value}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        ) : null}
+                  {/* Specifications (key/value) */}
+                  {Array.isArray(attrs?.specs) && attrs.specs.length > 0 && (
+                    <View style={{ marginBottom: spacing.md }}>
+                      <Text style={styles.cardTitle}>Specifications</Text>
+                      {attrs.specs.map((s, idx) => (
+                        <View key={idx} style={styles.nvRow}>
+                          <Text style={styles.nvName}>{s.name}</Text>
+                          <Text style={styles.nvValue}>{s.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
 
-        {/* About section preserved below more info */}
-        {viewProduct?.description ? (
-          <View style={styles.cardBox}>
-            <Text style={styles.cardTitle}>About this item</Text>
-            <Text style={styles.description}>{viewProduct.description}</Text>
-          </View>
-        ) : null}
+                  {/* Description */}
+                  {attrs?.description ? (
+                    <View style={{ marginBottom: spacing.md }}>
+                      <Text style={styles.cardTitle}>Description</Text>
+                      <Text style={styles.description}>
+                        {attrs.description}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {/* Nutrition */}
+                  {attrs?.nutrition ? (
+                    <View style={{ marginBottom: spacing.md }}>
+                      <Text style={styles.cardTitle}>Nutrition info</Text>
+                      <Text style={styles.description}>{attrs.nutrition}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
 
       {/* Floating cart button placed above footer CTA */}
