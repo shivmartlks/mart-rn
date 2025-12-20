@@ -23,6 +23,7 @@ import {
 } from "../../services/adminApi";
 import { cacheClear } from "../../services/cache";
 import { Platform, KeyboardAvoidingView } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Field configs per type
 const FIELD_CONFIG = {
@@ -83,6 +84,9 @@ export default function AdminForm() {
   // Product-only extra UI state
   const [adminMoreOpen, setAdminMoreOpen] = useState(false);
   const [specsDupError, setSpecsDupError] = useState("");
+
+  const insets = useSafeAreaInsets();
+  const FOOTER_HEIGHT = 64; // sticky footer CTA height
 
   useEffect(() => {
     if (id) load();
@@ -188,23 +192,35 @@ export default function AdminForm() {
     }));
   }
 
-  function validateProductSpecs() {
-    // Prevent duplicate spec keys (case/trim insensitive) at UI-level
-    const specs = Array.isArray(values.more_info) ? values.more_info : [];
+  // Make product specs validation pure (no state updates inside)
+  function validateProductSpecsPure(specsArr) {
+    const specs = Array.isArray(specsArr) ? specsArr : [];
     const seen = new Set();
     for (const row of specs) {
       const name = String(row?.name || "")
         .trim()
         .toLowerCase();
       if (!name) continue;
-      if (seen.has(name)) {
-        setSpecsDupError("Duplicate specification keys are not allowed.");
-        return false;
-      }
+      if (seen.has(name))
+        return {
+          ok: false,
+          message: "Duplicate specification keys are not allowed.",
+        };
       seen.add(name);
     }
-    setSpecsDupError("");
-    return true;
+    return { ok: true, message: "" };
+  }
+
+  // Side-effect: derive and set duplicate error when specs change
+  useEffect(() => {
+    const { ok, message } = validateProductSpecsPure(values.more_info);
+    setSpecsDupError(ok ? "" : message);
+  }, [values.more_info]);
+
+  // Old function retained for compatibility but no state updates during render
+  function validateProductSpecs() {
+    const { ok } = validateProductSpecsPure(values.more_info);
+    return ok;
   }
 
   function validateFields() {
@@ -984,7 +1000,9 @@ export default function AdminForm() {
           style={{ flex: 1 }}
           contentContainerStyle={{
             padding: spacing.lg,
-            paddingBottom: spacing.xxl,
+            // Ensure enough space so last inputs aren’t hidden behind the sticky footer
+            paddingBottom:
+              (FOOTER_HEIGHT || 64) + (insets?.bottom || 0) + spacing.xl,
           }}
           keyboardShouldPersistTaps="handled"
         >

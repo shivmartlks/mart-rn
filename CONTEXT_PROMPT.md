@@ -3,17 +3,20 @@
 This file summarizes the implemented changes and rules for the shared Admin + User React/React Native codebase using the new schema.
 
 Schema tables:
+
 - products (core only)
 - product_images (carousel)
 - product_attributes (highlights, specs, long text)
 
 Global rules:
+
 - Do not implement Similar Products logic.
 - Do not change existing cache keys.
 - Do not introduce JSONB usage.
 - Keep UI behavior unchanged except where specified.
 
 User side (Product PDP):
+
 - Initial load fetches ONLY products (core fields) and product_images.
 - Renders image carousel, product name/price/discount, 3 static trust boxes, and a button labeled "More product details".
 - product_attributes are NOT fetched at initial load.
@@ -27,6 +30,7 @@ User side (Product PDP):
 - Cache behavior: After first attribute fetch, merge into cached product as attributes; subsequent expands reuse cache without DB calls.
 
 Admin side (Product Add/Edit):
+
 - Mobile-first, single-column, scrollable UI.
 - Form sections: Basic Info, Images, Highlights, Specifications, and an "Add more info" toggle (collapsed by default).
 - Basic Info: Save ONLY core fields to products.
@@ -38,6 +42,7 @@ Admin side (Product Add/Edit):
 - Validation (UI level only): ignore empty highlights/specs; trim long text; prevent duplicate spec keys; do not block save for empty optional sections.
 
 Implementation status in this workspace:
+
 - User PDP (src/screens/user/ProductDetails.js):
   - Initial load requests products and product_images only; no attributes.
   - "More product details" inline expand triggers lazy load of product_attributes with normalization and caching under product:${productId}. Subsequent expands reuse cache and avoid DB calls.
@@ -51,5 +56,6 @@ Implementation status in this workspace:
   - No JSONB usage introduced; Similar Products logic untouched.
 
 Notes:
+
 - Existing cache keys like product:${productId} and cartqty:${userId}:${productId} are preserved.
 - If any area already matched behavior, it was left unchanged.
