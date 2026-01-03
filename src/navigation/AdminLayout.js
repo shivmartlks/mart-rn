@@ -7,9 +7,9 @@ import { colors } from "../theme";
 
 // ADMIN SCREENS
 import AdminDashboard from "../screens/admin/AdminDashboard";
-import ManageProducts from "../screens/admin/ManageProducts";
 import ManageOrders from "../screens/admin/ManageOrders";
-import Profile from "../screens/shared/Profile";
+import More from "../screens/admin/More";
+import Inventory from "../screens/admin/Inventory";
 
 const Tab = createBottomTabNavigator();
 
@@ -52,9 +52,9 @@ export default function AdminLayout() {
       tabBar={(props) => <Footer {...props} role="admin" />}
     >
       <Tab.Screen name="Dashboard" component={AdminDashboard} />
-      <Tab.Screen name="Products" component={ManageProducts} />
+      <Tab.Screen name="Inventory" component={Inventory} />
       <Tab.Screen name="Orders" component={ManageOrders} />
-      <Tab.Screen name="Profile" component={Profile} />
+      <Tab.Screen name="More" component={More} />
     </Tab.Navigator>
   );
 }

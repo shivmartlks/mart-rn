@@ -12,10 +12,10 @@ export const adminTabs = [
   { key: "Dashboard", label: "Dashboard", icon: "home", path: "Dashboard" },
   {
     key: "Products",
-    label: "Products",
+    label: "Inventory",
     icon: "shopping-bag",
     path: "Products",
   },
   { key: "Orders", label: "Orders", icon: "clipboard", path: "Orders" },
-  { key: "Profile", label: "Profile", icon: "user", path: "Profile" },
+  { key: "More", label: "More", icon: "menu", path: "More" },
 ];

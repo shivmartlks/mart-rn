@@ -89,3 +89,14 @@ export async function fetchProductWithAttributes(productId) {
   const attributes = attrRes.data || [];
   return { data: { product, attributes }, error };
 }
+
+export async function updateOrderStatus(orderId, status, remarks = "") {
+  return supabase
+    .from("orders")
+    .update({
+      status,
+      order_remarks: remarks,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", orderId);
+}

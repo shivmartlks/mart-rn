@@ -11,6 +11,8 @@ export function getStatusVariant(status) {
     case "cancelled":
     case "failed":
       return "danger";
+    case "hold":
+      return "info";
     default:
       return "info";
   }
