@@ -55,16 +55,17 @@ export default function Cart() {
   // -----------------------------
   async function loadCart() {
     const cartKey = user ? `cart:${user.id}` : null;
+    // Use cache for fast initial render
     if (cartKey) {
       const cached = cacheGet(cartKey);
       if (cached) {
         setCartItems(cached);
-        setLoading(false);
-        return;
+        // Do not return here — always reconcile with DB
       }
     }
 
-    const { data } = await supabase
+    // Always reconcile with DB and refresh cache/state
+    const { data, error } = await supabase
       .from("cart_items")
       .select(
         `
@@ -78,7 +79,7 @@ export default function Cart() {
       )
       .eq("user_id", user.id);
 
-    const list = data || [];
+    const list = error ? [] : data || [];
     setCartItems(list);
     if (cartKey) cacheSet(cartKey, list, 5 * 60 * 1000);
     setLoading(false);
@@ -248,9 +249,15 @@ export default function Cart() {
 
       const orderId = await placeOrder(user, defaultAddress.id, paymentMethod);
 
+      // Clear the cart in DB after successful order
+      await supabase.from("cart_items").delete().eq("user_id", user.id);
+
       // Invalidate caches after successful order
       cacheClear(user ? `cart:${user.id}` : undefined);
       cacheClear(user ? `orders:${user.id}` : undefined);
+
+      // Reset local state
+      setCartItems([]);
 
       Toast.show({
         type: "success",
