@@ -259,19 +259,21 @@ export default function Cart() {
       // Reset local state
       setCartItems([]);
 
-      Toast.show({
-        type: "success",
-        text1: "Order Placed 🎉",
-        text2: `Order ID: ${orderId}`,
+      // Navigate to success screen (no header/footer)
+      navigation.navigate("OrderSuccess", {
+        orderId,
+        address: defaultAddress,
+        timestamp: Date.now(),
       });
-
-      setTimeout(() => navigation.navigate("Orders"), 700);
     } catch (error) {
+      // Stay on Cart and show error toast for 5 seconds
       Toast.show({
         type: "error",
         text1: "Order Failed",
         text2: error.message,
+        visibilityTime: 5000,
       });
+      // Do not navigate away on failure
     }
   }
 

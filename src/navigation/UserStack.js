@@ -11,6 +11,7 @@ import OrderDetails from "../screens/user/OrderDetails";
 import ProductDetails from "../screens/user/ProductDetails";
 import Wishlist from "../screens/user/Wishlist";
 import Orders from "../screens/user/Orders";
+import OrderSuccess from "../screens/user/OrderSuccess";
 
 const Stack = createNativeStackNavigator();
 
@@ -79,6 +80,12 @@ export default function UserStack() {
         name="Orders"
         component={Orders}
         options={{ header: () => <Header title="Orders" showBack /> }}
+      />
+
+      <Stack.Screen
+        name="OrderSuccess"
+        component={OrderSuccess}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
