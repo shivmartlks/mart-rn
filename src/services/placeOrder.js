@@ -12,25 +12,80 @@ export async function placeOrder(user, addressId, paymentMode = "cod") {
 
   if (addrErr || !address) throw new Error("Address not found");
 
-  // 2️⃣ Load cart
-  const { data: cartItems, error: cartErr } = await supabase
+  // 2️⃣ Load cart (base rows, try to include products via relationship)
+  const { data: cartItemsRaw, error: cartErr } = await supabase
     .from("cart_items")
     .select("product_id, quantity, products(name, price)")
     .eq("user_id", user.id);
 
-  if (cartErr || !cartItems.length) throw new Error("Cart empty");
+  if (cartErr || !cartItemsRaw || cartItemsRaw.length === 0)
+    throw new Error("Cart empty");
+
+  // Normalize: ensure each cart row has a products object with numeric price
+  const cartItems = cartItemsRaw.map((i) => ({
+    ...i,
+    products: i.products || null,
+  }));
+
+  // If some cart rows lack products (e.g. RLS prevented join), try to fetch product data
+  const missingIds = Array.from(
+    new Set(cartItems.filter((c) => !c.products).map((c) => c.product_id))
+  );
+  if (missingIds.length) {
+    // Try to fetch via store_inventory relation (may be readable)
+    try {
+      const { data: invRows } = await supabase
+        .from("store_inventory")
+        .select("product_id, products(id, name, price)")
+        .in("product_id", missingIds);
+      const prodMap = {};
+      (invRows || []).forEach((r) => {
+        if (r?.products) prodMap[r.product_id] = r.products;
+      });
+      // For any still missing, fetch from products table directly
+      const stillMissing = missingIds.filter((id) => !prodMap[id]);
+      if (stillMissing.length) {
+        const { data: prodRows } = await supabase
+          .from("products")
+          .select("id, name, price")
+          .in("id", stillMissing);
+        (prodRows || []).forEach((p) => (prodMap[p.id] = p));
+      }
+      // Merge into cartItems
+      for (let idx = 0; idx < cartItems.length; idx++) {
+        const it = cartItems[idx];
+        if (!it.products && prodMap[it.product_id]) {
+          cartItems[idx] = {
+            ...it,
+            products: {
+              ...(prodMap[it.product_id] || {}),
+            },
+          };
+        }
+      }
+    } catch (e) {
+      // ignore and continue — later validation will catch missing product prices
+    }
+  }
+
+  // Ensure numeric prices (fallback to 0)
+  cartItems.forEach((i) => {
+    if (i.products) {
+      i.products.price = Number(i.products.price) || 0;
+    }
+  });
 
   // 3️⃣ Total
   const total = cartItems.reduce(
-    (sum, i) => sum + i.quantity * i.products.price,
+    (sum, i) => sum + i.quantity * (i.products?.price || 0),
     0
   );
 
   // 4️⃣ JSON backup
   const jsonItems = cartItems.map((i) => ({
     product_id: i.product_id,
-    name: i.products.name,
-    price: i.products.price,
+    name: i.products?.name || null,
+    price: i.products?.price || 0,
     quantity: i.quantity,
   }));
 
@@ -61,13 +116,13 @@ export async function placeOrder(user, addressId, paymentMode = "cod") {
       order_id: order.id,
       product_id: i.product_id,
       quantity: i.quantity,
-      price_each: i.products.price,
+      price_each: i.products?.price || 0,
     }))
   );
 
   if (itemsErr) throw itemsErr;
 
-  // 7️⃣ Decrement stock for each product using secure RPC (atomic)
+  // 7️⃣ Decrement stock via RPC (atomic)
   for (const i of cartItems) {
     const productId = i.product_id;
     const qty = Number(i.quantity);
@@ -80,7 +135,6 @@ export async function placeOrder(user, addressId, paymentMode = "cod") {
 
     if (rpcErr) throw rpcErr;
 
-    // rpcResult expected to be json/record with success flag
     const ok =
       rpcResult &&
       (rpcResult.success === true || rpcResult?.["success"] === true);

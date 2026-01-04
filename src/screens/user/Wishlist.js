@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Pressable,
   ScrollView,
+  Platform,
 } from "react-native";
 import { supabase } from "../../services/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
@@ -19,6 +20,7 @@ import Divider from "../../components/ui/Divider";
 import { SafeAreaView } from "react-native-safe-area-context";
 import WishlistEmptySvg from "../../../assets/wishlist_empty.svg";
 import { cacheGet, cacheSet, cacheClear } from "../../services/cache";
+import { fetchProductWithAttributes } from "../../services/adminApi";
 
 // =====================================================
 // MAIN WISHLIST SCREEN
@@ -43,46 +45,143 @@ export default function Wishlist() {
   );
 
   // -----------------------------------------------------
-  // Load wishlist items
+  // Load wishlist items (robust, merge products separately)
   // -----------------------------------------------------
   async function loadWishlist() {
     setLoading(true);
-
     const cacheKey = user ? `wishlist:${user.id}` : null;
     if (cacheKey) {
       const cached = cacheGet(cacheKey);
-      if (cached) {
-        setItems(cached);
-        // Do not return; reconcile with DB next
+      if (cached) setItems(cached);
+    }
+
+    // Fetch base wishlist rows first
+    const { data: rawRows, error: baseErr } = await supabase
+      .from("wishlist")
+      .select("id, product_id")
+      .eq("user_id", user.id);
+
+    const raw = baseErr ? [] : rawRows || [];
+
+    // Collect product ids
+    const productIds = Array.from(
+      new Set(raw.map((r) => r.product_id).filter(Boolean))
+    );
+
+    // Try to fetch product info via store_inventory relation (works when products select may be restricted)
+    let prodMap = {};
+    if (productIds.length) {
+      try {
+        const { data: invRows } = await supabase
+          .from("store_inventory")
+          .select(
+            "product_id, products(id, name, price, mrp, image_url, short_desc)"
+          )
+          .in("product_id", productIds);
+        (invRows || []).forEach((r) => {
+          if (r?.products) prodMap[r.product_id] = r.products;
+        });
+      } catch (e) {
+        // ignore and fallback
       }
     }
 
-    const { data, error } = await supabase
-      .from("wishlist")
-      .select(
-        `
-        id,
-        product_id,
-        products (
-          id,
-          name,
-          price,
-          mrp,
-          image_url,
-          short_desc,
-          description
-        )
-      `
-      )
-      .eq("user_id", user.id);
-
-    if (!error) {
-      const list = data || [];
-      setItems(list);
-      if (cacheKey) cacheSet(cacheKey, list, 5 * 60 * 1000);
+    // For any remaining product ids, fetch directly from products table
+    const missing = productIds.filter((id) => !prodMap[id]);
+    if (missing.length) {
+      try {
+        const { data: prodRows } = await supabase
+          .from("products")
+          .select("id, name, price, mrp, image_url, short_desc")
+          .in("id", missing);
+        (prodRows || []).forEach((p) => (prodMap[p.id] = p));
+      } catch (e) {
+        // ignore
+      }
     }
 
+    // Merge
+    const merged = raw.map((r) => ({
+      ...r,
+      products: prodMap[r.product_id] || null,
+    }));
+
+    setItems(merged);
+    if (cacheKey) cacheSet(cacheKey, merged, 5 * 60 * 1000);
     setLoading(false);
+
+    // Background reconciliation for missing product details
+    const missingIds = merged
+      .filter((m) => !m.products)
+      .map((m) => m.product_id);
+    if (missingIds.length) {
+      const debug = {
+        missing: missingIds,
+        fetchedFromInventory: Object.keys(prodMap),
+      };
+      // debug logging removed
+
+      for (const pid of missingIds) {
+        try {
+          const { data, error } = await fetchProductWithAttributes(pid);
+          const prod = data?.product || null;
+          if (prod) {
+            setItems((prev) =>
+              prev.map((it) =>
+                it.product_id === pid
+                  ? {
+                      ...it,
+                      products: {
+                        ...prod,
+                        price: Number(prod.price) || 0,
+                        mrp: Number(prod.mrp) || Number(prod.price) || 0,
+                      },
+                    }
+                  : it
+              )
+            );
+            if (cacheKey) {
+              const updated = (cacheGet(cacheKey) || []).map((it) =>
+                it.product_id === pid ? { ...it, products: prod } : it
+              );
+              cacheSet(cacheKey, updated, 5 * 60 * 1000);
+            }
+            continue;
+          }
+        } catch (e) {
+          // fetch fallback failed; swallow error silently
+        }
+
+        try {
+          const { data: prodRow } = await supabase
+            .from("products")
+            .select("id, name, price, mrp, image_url, short_desc")
+            .eq("id", pid)
+            .maybeSingle();
+          if (prodRow) {
+            const prod = {
+              ...prodRow,
+              price: Number(prodRow.price) || 0,
+              mrp: Number(prodRow.mrp) || Number(prodRow.price) || 0,
+            };
+            setItems((prev) =>
+              prev.map((it) =>
+                it.product_id === pid ? { ...it, products: prod } : it
+              )
+            );
+            if (cacheKey) {
+              const updated = (cacheGet(cacheKey) || []).map((it) =>
+                it.product_id === pid ? { ...it, products: prod } : it
+              );
+              cacheSet(cacheKey, updated, 5 * 60 * 1000);
+            }
+            continue;
+          }
+        } catch (e) {
+          // fallback fetch failed; swallow error silently
+        }
+      }
+    }
   }
 
   // -----------------------------------------------------
@@ -188,19 +287,22 @@ export default function Wishlist() {
       >
         {/* List of wishlist items */}
         {items.map((i) => {
-          const p = i.products;
+          const p = i.products || {};
           const isValidImage =
             p.image_url &&
             typeof p.image_url === "string" &&
             p.image_url.startsWith("http");
-          const mrp = p.mrp || p.price;
-          const discount = Math.round(((mrp - p.price) / mrp) * 100);
+          const price = Number(p.price) || 0;
+          const mrp = Number(p.mrp) || price;
+          const discount = mrp ? Math.round(((mrp - price) / mrp) * 100) : 0;
 
           return (
             <Card key={i.id} style={{ marginBottom: spacing.md }}>
               <Pressable
                 onPress={() =>
-                  navigation.navigate("ProductDetails", { product: p })
+                  navigation.navigate("ProductDetails", {
+                    product: p || { id: i.product_id },
+                  })
                 }
                 style={{ flexDirection: "row" }}
               >
@@ -226,7 +328,7 @@ export default function Wishlist() {
                     }}
                     numberOfLines={1}
                   >
-                    {p.name}
+                    {p.name || `Product #${i.product_id}`}
                   </Text>
                   <Text
                     style={{
@@ -255,7 +357,7 @@ export default function Wishlist() {
                         color: colors.textPrimary,
                       }}
                     >
-                      ₹{p.price}
+                      ₹{price}
                     </Text>
                     <Text
                       style={{
@@ -287,7 +389,7 @@ export default function Wishlist() {
                   >
                     <Button
                       size="sm"
-                      onPress={() => addItemToCart(p.id, i.id)}
+                      onPress={() => addItemToCart(i.product_id, i.id)}
                       style={{ flex: 1 }}
                     >
                       Add to Cart
