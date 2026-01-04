@@ -22,6 +22,7 @@ import Toast from "react-native-toast-message";
 import { placeOrder } from "../../services/placeOrder";
 import CartEmptySvg from "../../../assets/cart_empty.svg";
 import { cacheGet, cacheSet, cacheClear } from "../../services/cache";
+import { fetchProductWithAttributes } from "../../services/adminApi";
 
 // Theme tokens (use your theme module)
 import { colors, spacing, textSizes, fontWeights, radii } from "../../theme";
@@ -54,6 +55,7 @@ export default function Cart() {
   // Load Cart (with cache)
   // -----------------------------
   async function loadCart() {
+    setLoading(true);
     const cartKey = user ? `cart:${user.id}` : null;
     // Use cache for fast initial render
     if (cartKey) {
@@ -64,25 +66,166 @@ export default function Cart() {
       }
     }
 
-    // Always reconcile with DB and refresh cache/state
     const { data, error } = await supabase
       .from("cart_items")
       .select(
         `
         id,
         product_id,
-        quantity,
-        products (
-          id, name, price, mrp, image_url, short_desc, description, stock_value
-        )
+        quantity
       `
       )
       .eq("user_id", user.id);
 
-    const list = error ? [] : data || [];
-    setCartItems(list);
-    if (cartKey) cacheSet(cartKey, list, 5 * 60 * 1000);
+    const raw = error ? [] : data || [];
+
+    // Fetch products for these product_ids
+    const productIds = Array.from(
+      new Set(raw.map((i) => i.product_id).filter(Boolean))
+    );
+
+    // Attempt to fetch product info via store_inventory (includes related products) — more likely to be readable under RLS
+    let prodMap = {};
+    let invWithProdRows = null;
+    let productsRows = null;
+    try {
+      if (productIds.length) {
+        const invRes = await supabase
+          .from("store_inventory")
+          .select(
+            "product_id, stock_value, products(id, name, price, mrp, image_url, short_desc)"
+          )
+          .in("product_id", productIds);
+        invWithProdRows = invRes.data || null;
+        (invWithProdRows || []).forEach((r) => {
+          if (r?.products) prodMap[r.product_id] = r.products;
+        });
+      }
+    } catch (e) {
+      // store the error in debug
+      invWithProdRows = { error: String(e) };
+    }
+
+    // For any remaining productIds not found via inventory relation, fetch directly from products
+    const stillMissing = productIds.filter((id) => !prodMap[id]);
+    if (stillMissing.length) {
+      try {
+        const prodRes = await supabase
+          .from("products")
+          .select("id, name, price, mrp, image_url, short_desc")
+          .in("id", stillMissing);
+        productsRows = prodRes.data || null;
+        (productsRows || []).forEach((p) => (prodMap[p.id] = p));
+      } catch (e) {
+        productsRows = { error: String(e) };
+      }
+    }
+
+    // Merge products into cart rows (allow null products; we'll render fallbacks)
+    let list = raw.map((i) => ({
+      ...i,
+      products: prodMap[i.product_id] || null,
+    }));
+
+    // Fetch inventory for these product_ids (ensure we still have inventory mapping)
+    let invMap = {};
+    if (productIds.length) {
+      const { data: invRows } = await supabase
+        .from("store_inventory")
+        .select("product_id, stock_value")
+        .in("product_id", productIds);
+      (invRows || []).forEach((r) => (invMap[r.product_id] = r.stock_value));
+    }
+
+    // Attach _stock_value to each cart item and normalize prices
+    const withInv = list.map((i) => ({
+      ...i,
+      _stock_value: invMap[i.product_id] ?? 0,
+      products: i.products
+        ? {
+            ...i.products,
+            price: Number(i.products.price) || 0,
+            mrp:
+              typeof i.products.mrp === "number"
+                ? i.products.mrp
+                : Number(i.products.mrp) || Number(i.products.price) || 0,
+          }
+        : null,
+    }));
+
+    setCartItems(withInv);
+    if (cartKey) cacheSet(cartKey, withInv, 5 * 60 * 1000);
     setLoading(false);
+
+    // If some cart rows lack product details, try to fetch them individually in background
+    const itemsMissingProduct = withInv
+      .filter((it) => !it.products)
+      .map((it) => it.product_id);
+    if (itemsMissingProduct.length) {
+      for (const pid of itemsMissingProduct) {
+        try {
+          // First try adminApi helper (fetchProductWithAttributes)
+          const { data, error } = await fetchProductWithAttributes(pid);
+          const prod = data?.product || null;
+          if (prod) {
+            // merge into state
+            setCartItems((prev) =>
+              prev.map((it) =>
+                it.product_id === pid
+                  ? {
+                      ...it,
+                      products: {
+                        ...prod,
+                        price: Number(prod.price) || 0,
+                        mrp: Number(prod.mrp) || Number(prod.price) || 0,
+                      },
+                    }
+                  : it
+              )
+            );
+            if (cartKey) {
+              const updated = (cacheGet(cartKey) || []).map((it) =>
+                it.product_id === pid ? { ...it, products: prod } : it
+              );
+              cacheSet(cartKey, updated, 5 * 60 * 1000);
+            }
+            continue;
+          }
+        } catch (e) {
+          // ignore and fallback
+        }
+
+        try {
+          // Fallback: direct products table fetch
+          const { data: prodRow } = await supabase
+            .from("products")
+            .select("id, name, price, mrp, image_url, short_desc")
+            .eq("id", pid)
+            .maybeSingle();
+          if (prodRow) {
+            const prod = {
+              ...prodRow,
+              price: Number(prodRow.price) || 0,
+              mrp: Number(prodRow.mrp) || Number(prodRow.price) || 0,
+            };
+            setCartItems((prev) =>
+              prev.map((it) =>
+                it.product_id === pid ? { ...it, products: prod } : it
+              )
+            );
+            if (cartKey) {
+              const updated = (cacheGet(cartKey) || []).map((it) =>
+                it.product_id === pid ? { ...it, products: prod } : it
+              );
+              cacheSet(cartKey, updated, 5 * 60 * 1000);
+            }
+            continue;
+          }
+        } catch (e) {}
+
+        // If still not found, leave as-is; debug will show missing ids
+      }
+    }
   }
 
   // -----------------------------
@@ -111,18 +254,66 @@ export default function Cart() {
   }
 
   // -----------------------------
-  // Add / Remove with cache invalidation
+  // Add / Remove with cache invalidation (optimistic, no loader)
   // -----------------------------
   async function onIncrease(productId) {
-    await addToCart(productId, user.id);
-    cacheClear(user ? `cart:${user.id}` : undefined);
-    loadCart();
+    if (!user) return;
+    // Optimistic update locally
+    setCartItems((prev) => {
+      const idx = prev.findIndex((it) => it.product_id === productId);
+      if (idx === -1) {
+        // add a new line with minimal product info (will be refreshed later)
+        const newItem = {
+          id: `tmp-${productId}`,
+          product_id: productId,
+          quantity: 1,
+          products: null,
+          _stock_value: 0,
+        };
+        const next = [newItem, ...prev];
+        if (user?.id) cacheSet(`cart:${user.id}`, next, 5 * 60 * 1000);
+        return next;
+      }
+      const copy = [...prev];
+      copy[idx] = { ...copy[idx], quantity: (copy[idx].quantity || 0) + 1 };
+      if (user?.id) cacheSet(`cart:${user.id}`, copy, 5 * 60 * 1000);
+      return copy;
+    });
+
+    // Fire-and-forget DB update, then reconcile cache/state in background
+    try {
+      await addToCart(productId, user.id);
+    } catch (e) {
+      // on error, refresh from DB
+      await loadCart();
+      return;
+    }
   }
 
   async function onDecrease(productId) {
-    await removeFromCart(productId, user.id);
-    cacheClear(user ? `cart:${user.id}` : undefined);
-    loadCart();
+    if (!user) return;
+    // Optimistic update locally
+    setCartItems((prev) => {
+      const idx = prev.findIndex((it) => it.product_id === productId);
+      if (idx === -1) return prev;
+      const copy = [...prev];
+      const current = copy[idx].quantity || 0;
+      if (current <= 1) {
+        copy.splice(idx, 1);
+      } else {
+        copy[idx] = { ...copy[idx], quantity: current - 1 };
+      }
+      if (user?.id) cacheSet(`cart:${user.id}`, copy, 5 * 60 * 1000);
+      return copy;
+    });
+
+    // Fire-and-forget DB update
+    try {
+      await removeFromCart(productId, user.id);
+    } catch (e) {
+      await loadCart();
+      return;
+    }
   }
 
   // -----------------------------
@@ -130,12 +321,18 @@ export default function Cart() {
   // -----------------------------
   const calculateMRP = () =>
     cartItems.reduce(
-      (sum, i) => sum + i.quantity * (i.products.mrp || i.products.price),
+      (sum, i) =>
+        sum +
+        i.quantity *
+          (Number(i.products?.mrp) || Number(i.products?.price) || 0),
       0
     );
 
   const calculateTotal = () =>
-    cartItems.reduce((sum, i) => sum + i.quantity * i.products.price, 0);
+    cartItems.reduce(
+      (sum, i) => sum + i.quantity * (Number(i.products?.price) || 0),
+      0
+    );
 
   const calculateSavings = () => calculateMRP() - calculateTotal();
 
@@ -285,6 +482,8 @@ export default function Cart() {
       style={[styles.container, { backgroundColor: colors.screenBG }]}
       contentContainerStyle={{ padding: spacing.lg }}
     >
+      {/* Debug removed */}
+
       {/* CARD 1: ADDRESS */}
       <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
         Delivery Address
@@ -335,10 +534,12 @@ export default function Cart() {
         }}
       >
         {cartItems.map((i) => {
-          const p = i.products;
-          const mrp = p.mrp || p.price;
-          const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
-          const isValidImage = p.image_url?.startsWith("http");
+          const p = i.products || {};
+          const price = typeof p.price === "number" ? p.price : 0;
+          const mrp = typeof p.mrp === "number" ? p.mrp : price;
+          const discount = mrp ? Math.round(((mrp - price) / mrp) * 100) : 0;
+          const isValidImage = (p.image_url || "").startsWith("http");
+          const name = p.name || `Product #${i.product_id}`;
 
           return (
             <View
@@ -366,7 +567,7 @@ export default function Cart() {
                   style={[styles.itemName, { color: colors.textPrimary }]}
                   numberOfLines={2}
                 >
-                  {p.name}
+                  {name}
                 </Text>
 
                 <View style={styles.priceRow}>
@@ -376,7 +577,7 @@ export default function Cart() {
                       { color: colors.textPrimary },
                     ]}
                   >
-                    ₹{p.price}
+                    ₹{price}
                   </Text>
                   <Text
                     style={[styles.itemMRP, { color: colors.textSecondary }]}
@@ -394,13 +595,9 @@ export default function Cart() {
                   variant="default"
                   mode="filled"
                   size="sm"
-                  onIncrease={async () => {
-                    await onIncrease(i.product_id);
-                  }}
-                  onDecrease={async () => {
-                    await onDecrease(i.product_id);
-                  }}
-                  disableIncrease={i.quantity >= p.stock_value} // Disable + button if stock is exceeded
+                  onIncrease={() => onIncrease(i.product_id)}
+                  onDecrease={() => onDecrease(i.product_id)}
+                  disableIncrease={i.quantity >= (i._stock_value ?? 0)}
                   style={{ marginTop: spacing.sm }}
                 />
 
@@ -431,7 +628,7 @@ export default function Cart() {
 
               {/* Total Amount */}
               <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>
-                ₹{(i.quantity * p.price).toFixed(2)}
+                ₹{(i.quantity * price).toFixed(2)}
               </Text>
             </View>
           );

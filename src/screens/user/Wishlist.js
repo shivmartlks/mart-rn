@@ -53,8 +53,7 @@ export default function Wishlist() {
       const cached = cacheGet(cacheKey);
       if (cached) {
         setItems(cached);
-        setLoading(false);
-        return;
+        // Do not return; reconcile with DB next
       }
     }
 
@@ -124,8 +123,10 @@ export default function Wishlist() {
 
     // Remove item from wishlist
     await supabase.from("wishlist").delete().eq("id", wishlistId);
+    // Invalidate caches and refresh
+    cacheClear(user ? `cart:${user.id}` : undefined);
     cacheClear(user ? `wishlist:${user.id}` : undefined);
-    loadWishlist();
+    await loadWishlist();
   }
 
   // -----------------------------------------------------

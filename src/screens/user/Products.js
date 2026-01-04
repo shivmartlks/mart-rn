@@ -28,6 +28,7 @@ import Button from "../../components/ui/Button";
 import QuantitySelector from "../../components/ui/QuantitySelector";
 import DefaultProduct from "../../../assets/default_product.svg";
 import { cacheGet, cacheSet } from "../../services/cache";
+import { cacheClear } from "../../services/cache";
 
 // Theme tokens
 import { colors, spacing, textSizes, radii, fontWeights } from "../../theme";
@@ -67,10 +68,10 @@ export default function Products() {
       const cachedGroups = cacheGet(grpKey);
       const cachedProducts = cacheGet(prodKey);
 
+      let g, p;
       if (cachedGroups && cachedProducts) {
-        setGroups(cachedGroups);
-        setProducts(cachedProducts);
-        if (cachedGroups.length) setActiveGroup(cachedGroups[0].id);
+        g = cachedGroups;
+        p = cachedProducts;
       } else {
         const { data: grps } = await supabase
           .from("product_groups")
@@ -88,14 +89,30 @@ export default function Products() {
           .eq("user_visibility", true)
           .order("name");
 
-        const g = grps || [];
-        const p = prods || [];
-        setGroups(g);
-        setProducts(p);
-        if (g.length) setActiveGroup(g[0].id);
+        g = grps || [];
+        p = prods || [];
         cacheSet(grpKey, g);
         cacheSet(prodKey, p);
       }
+
+      setGroups(g);
+      setProducts(p);
+      if (g.length) setActiveGroup(g[0].id);
+
+      // Fetch inventory for these products from store_inventory
+      const productIds = (p || []).map((x) => x.id);
+      let invMap = {};
+      if (productIds.length) {
+        const { data: invRows } = await supabase
+          .from("store_inventory")
+          .select("product_id, stock_value")
+          .in("product_id", productIds);
+        (invRows || []).forEach((r) => (invMap[r.product_id] = r.stock_value));
+      }
+      // Attach inventory to products in state for convenience
+      setProducts((prev) =>
+        prev.map((x) => ({ ...x, _stock_value: invMap[x.id] ?? 0 }))
+      );
 
       if (user) {
         const count = await getCartCount(user.id);
@@ -133,6 +150,8 @@ export default function Products() {
       const newQty = (cartItems[product.id] || 0) + 1;
       setCartItems({ ...cartItems, [product.id]: newQty });
       setCartCount((prev) => prev + 1);
+      // Invalidate cart cache so Cart loads fresh data
+      cacheClear(`cart:${user.id}`);
     }
   }
 
@@ -149,6 +168,8 @@ export default function Products() {
 
       setCartItems(updated);
       setCartCount((prev) => prev - 1);
+      // Invalidate cart cache so Cart loads fresh data
+      cacheClear(`cart:${user.id}`);
     }
   }
 
@@ -180,8 +201,8 @@ export default function Products() {
     const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
 
     const isValidImage = p.image_url?.startsWith("http");
-    const isOutOfStock = !p.is_available;
-    const isLowStock = p.stock_value < 5 && p.stock_value > 0;
+    const isOutOfStock = (p._stock_value ?? 0) <= 0;
+    const isLowStock = (p._stock_value ?? 0) < 5 && (p._stock_value ?? 0) > 0;
 
     return (
       <View style={[styles.productCard, isOutOfStock && { opacity: 0.5 }]}>
@@ -219,7 +240,7 @@ export default function Products() {
               onIncrease={() => handleAdd(p)}
               onDecrease={() => handleRemove(p)}
               style={{ position: "absolute", bottom: 8, right: 8 }}
-              disableIncrease={qty >= p.stock_value}
+              disableIncrease={qty >= (p._stock_value ?? 0)}
             />
           )}
         </Pressable>
@@ -232,7 +253,7 @@ export default function Products() {
             {p.name}
           </Text>
           <Text style={styles.shortDesc} numberOfLines={1}>
-            {p.short_desc || p.description}
+            {p.short_desc || ""}
           </Text>
         </Pressable>
 

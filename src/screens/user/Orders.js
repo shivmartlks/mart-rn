@@ -42,7 +42,7 @@ export default function Orders() {
       if (cached) {
         setOrders(cached);
         setLoading(false);
-        return;
+        // Do not return; always reconcile with DB
       }
     }
 

@@ -8,7 +8,11 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
-import { useRoute, useFocusEffect } from "@react-navigation/native";
+import {
+  useRoute,
+  useFocusEffect,
+  useNavigation,
+} from "@react-navigation/native";
 import {
   addToCart,
   removeFromCart,
@@ -22,12 +26,14 @@ import { IMAGES } from "../../const/imageConst";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { cacheGet, cacheSet } from "../../services/cache";
+import { cacheClear } from "../../services/cache";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchProductWithAttributes } from "../../services/adminApi";
 import { useWindowDimensions } from "react-native";
 
 export default function ProductDetails() {
   const route = useRoute();
+  const navigation = useNavigation();
   const { user } = useAuth();
   const productParam = route.params?.product;
   const productId = productParam?.id;
@@ -101,7 +107,17 @@ export default function ProductDetails() {
             .map((i) => ({ uri: normalizeImageUrl(i.image_url) }))
             .filter((o) => !!o.uri)
         : [];
-      const finalProduct = { ...product, images };
+      // Fetch inventory from store_inventory
+      const { data: inv } = await supabase
+        .from("store_inventory")
+        .select("stock_value")
+        .eq("product_id", productId)
+        .maybeSingle();
+      const finalProduct = {
+        ...product,
+        images,
+        _stock_value: inv?.stock_value ?? 0,
+      };
       setViewProduct(finalProduct);
       if (productKey) cacheSet(productKey, finalProduct);
     }
@@ -149,7 +165,7 @@ export default function ProductDetails() {
     }
     const { data } = await supabase
       .from("cart_items")
-      .select("quantity, products(stock_value)")
+      .select("quantity")
       .eq("user_id", user.id)
       .eq("product_id", productId)
       .maybeSingle();
@@ -192,6 +208,12 @@ export default function ProductDetails() {
     const newQty = qty + 1;
     setQty(newQty);
     if (cartQtyKey) cacheSet(cartQtyKey, newQty, 2 * 60 * 1000);
+    // Invalidate cart cache and refresh count
+    if (user?.id) cacheClear(`cart:${user.id}`);
+    if (user?.id) {
+      const count = await getCartCount(user.id);
+      setCartCount(count);
+    }
   };
   const handleRemove = async () => {
     if (qty === 0) return;
@@ -199,13 +221,20 @@ export default function ProductDetails() {
     const newQty = Math.max(0, qty - 1);
     setQty(newQty);
     if (cartQtyKey) cacheSet(cartQtyKey, newQty, 2 * 60 * 1000);
+    // Invalidate cart cache and refresh count
+    if (user?.id) cacheClear(`cart:${user.id}`);
+    if (user?.id) {
+      const count = await getCartCount(user.id);
+      setCartCount(count);
+    }
   };
 
   const images = Array.isArray(viewProduct?.images) ? viewProduct.images : [];
   const attrs = viewProduct?.attributes;
 
-  const isOutOfStock = Number(viewProduct?.stock_value) <= 0;
-  const limitedQty = Number(viewProduct?.stock_value) <= 5 && !isOutOfStock;
+  const isOutOfStock = Number(viewProduct?._stock_value ?? 0) <= 0;
+  const limitedQty =
+    Number(viewProduct?._stock_value ?? 0) <= 5 && !isOutOfStock;
   const discountPercent =
     viewProduct?.discount_percent ??
     (viewProduct?.mrp
@@ -288,7 +317,7 @@ export default function ProductDetails() {
 
           {limitedQty ? (
             <Text style={styles.limited}>
-              Limited stock: only {viewProduct?.stock_value} left
+              Limited stock: only {viewProduct?._stock_value} left
             </Text>
           ) : null}
           {isOutOfStock ? (
@@ -440,7 +469,8 @@ export default function ProductDetails() {
             block
             onPress={handleAdd}
             disabled={
-              isOutOfStock || qty >= (Number(viewProduct?.stock_value) || 0)
+              isOutOfStock ||
+              qty >= (Number(viewProduct?._stock_value ?? 0) || 0)
             }
           >
             Add to Cart
