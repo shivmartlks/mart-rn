@@ -26,10 +26,12 @@ import { fetchProductWithAttributes } from "../../services/adminApi";
 
 // Theme tokens (use your theme module)
 import { colors, spacing, textSizes, fontWeights, radii } from "../../theme";
+import { useActiveStore } from "../../contexts/ActiveStoreContext";
 
 export default function Cart() {
   const navigation = useNavigation();
   const { user } = useAuth();
+  const { store, loading: storeLoading, storeSettings } = useActiveStore();
 
   const [cartItems, setCartItems] = useState([]);
   const [defaultAddress, setDefaultAddress] = useState(null);
@@ -522,186 +524,247 @@ export default function Cart() {
         )}
       </Card>
 
-      {/* CARD 2: YOUR ITEMS */}
-      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-        Your Items
-      </Text>
-      <Card
-        style={{
-          marginBottom: spacing.lg,
-          backgroundColor: colors.cardBG,
-          borderColor: colors.border,
-        }}
-      >
-        {cartItems.map((i) => {
-          const p = i.products || {};
-          const price = typeof p.price === "number" ? p.price : 0;
-          const mrp = typeof p.mrp === "number" ? p.mrp : price;
-          const discount = mrp ? Math.round(((mrp - price) / mrp) * 100) : 0;
-          const isValidImage = (p.image_url || "").startsWith("http");
-          const name = p.name || `Product #${i.product_id}`;
+      {/* Only render checkout actions after store settings are loaded */}
+      {!storeLoading && (
+        <>
+          {/* CARD 2: YOUR ITEMS */}
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Your Items
+          </Text>
+          <Card
+            style={{
+              marginBottom: spacing.lg,
+              backgroundColor: colors.cardBG,
+              borderColor: colors.border,
+            }}
+          >
+            {cartItems.map((i) => {
+              const p = i.products || {};
+              const price = typeof p.price === "number" ? p.price : 0;
+              const mrp = typeof p.mrp === "number" ? p.mrp : price;
+              const discount = mrp
+                ? Math.round(((mrp - price) / mrp) * 100)
+                : 0;
+              const isValidImage = (p.image_url || "").startsWith("http");
+              const name = p.name || `Product #${i.product_id}`;
 
-          return (
-            <View
-              key={i.id}
-              style={[
-                styles.cartItem,
-                { backgroundColor: "transparent", borderColor: "transparent" },
-              ]}
-            >
-              {/* Image */}
-              <Pressable
-                onPress={() =>
-                  navigation.navigate("ProductDetails", { product: p })
-                }
-              >
-                <Image
-                  source={isValidImage ? { uri: p.image_url } : IMAGES.default}
-                  style={styles.cartImage}
-                />
-              </Pressable>
-
-              {/* ITEM INFO */}
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={[styles.itemName, { color: colors.textPrimary }]}
-                  numberOfLines={2}
+              return (
+                <View
+                  key={i.id}
+                  style={[
+                    styles.cartItem,
+                    {
+                      backgroundColor: "transparent",
+                      borderColor: "transparent",
+                    },
+                  ]}
                 >
-                  {name}
-                </Text>
+                  {/* Image */}
+                  <Pressable
+                    onPress={() =>
+                      navigation.navigate("ProductDetails", { product: p })
+                    }
+                  >
+                    <Image
+                      source={
+                        isValidImage ? { uri: p.image_url } : IMAGES.default
+                      }
+                      style={styles.cartImage}
+                    />
+                  </Pressable>
 
-                <View style={styles.priceRow}>
+                  {/* ITEM INFO */}
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[styles.itemName, { color: colors.textPrimary }]}
+                      numberOfLines={2}
+                    >
+                      {name}
+                    </Text>
+
+                    <View style={styles.priceRow}>
+                      <Text
+                        style={[
+                          styles.itemPriceDiscount,
+                          { color: colors.textPrimary },
+                        ]}
+                      >
+                        ₹{price}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.itemMRP,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        ₹{mrp}
+                      </Text>
+                      <Text style={[styles.itemOff, { color: colors.success }]}>
+                        {discount}% OFF
+                      </Text>
+                    </View>
+
+                    {/* Quantity Using NEW COMPONENT */}
+                    <QuantitySelector
+                      value={i.quantity}
+                      variant="default"
+                      mode="filled"
+                      size="sm"
+                      onIncrease={() => onIncrease(i.product_id)}
+                      onDecrease={() => onDecrease(i.product_id)}
+                      disableIncrease={i.quantity >= (i._stock_value ?? 0)}
+                      style={{ marginTop: spacing.sm }}
+                    />
+
+                    {/* Move to wishlist */}
+                    <Pressable
+                      onPress={async () => {
+                        await supabase.from("wishlist").insert({
+                          user_id: user.id,
+                          product_id: i.product_id,
+                        });
+                        await supabase
+                          .from("cart_items")
+                          .delete()
+                          .eq("user_id", user.id)
+                          .eq("product_id", i.product_id);
+                        cacheClear(user ? `cart:${user.id}` : undefined);
+                        cacheClear(user ? `wishlist:${user.id}` : undefined);
+                        loadCart();
+                      }}
+                    >
+                      <Text
+                        style={[styles.wishlistText, { color: colors.primary }]}
+                      >
+                        ❤️ Move to Wishlist
+                      </Text>
+                    </Pressable>
+                  </View>
+
+                  {/* Total Amount */}
                   <Text
-                    style={[
-                      styles.itemPriceDiscount,
-                      { color: colors.textPrimary },
-                    ]}
+                    style={[styles.itemTotal, { color: colors.textPrimary }]}
                   >
-                    ₹{price}
-                  </Text>
-                  <Text
-                    style={[styles.itemMRP, { color: colors.textSecondary }]}
-                  >
-                    ₹{mrp}
-                  </Text>
-                  <Text style={[styles.itemOff, { color: colors.success }]}>
-                    {discount}% OFF
+                    ₹{(i.quantity * price).toFixed(2)}
                   </Text>
                 </View>
+              );
+            })}
+          </Card>
 
-                {/* Quantity Using NEW COMPONENT */}
-                <QuantitySelector
-                  value={i.quantity}
-                  variant="default"
-                  mode="filled"
-                  size="sm"
-                  onIncrease={() => onIncrease(i.product_id)}
-                  onDecrease={() => onDecrease(i.product_id)}
-                  disableIncrease={i.quantity >= (i._stock_value ?? 0)}
-                  style={{ marginTop: spacing.sm }}
-                />
+          {/* CARD 3: PAYMENT OPTIONS */}
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Payment Options
+          </Text>
+          <Card
+            style={{
+              marginBottom: spacing.lg,
+              backgroundColor: colors.cardBG,
+              borderColor: colors.border,
+            }}
+          >
+            <RadioGroup
+              value={paymentMethod}
+              onChange={(val) => setPaymentMethod(val)}
+              options={[
+                {
+                  value: "cod",
+                  label: "Cash on Delivery (COD)",
+                  disabled: false,
+                },
+                {
+                  value: "online",
+                  label: "Online Payment",
+                  disabled: true,
+                  note: "Unavailable",
+                },
+              ]}
+              direction="column"
+              size="md"
+            />
 
-                {/* Move to wishlist */}
-                <Pressable
-                  onPress={async () => {
-                    await supabase.from("wishlist").insert({
-                      user_id: user.id,
-                      product_id: i.product_id,
-                    });
-                    await supabase
-                      .from("cart_items")
-                      .delete()
-                      .eq("user_id", user.id)
-                      .eq("product_id", i.product_id);
-                    cacheClear(user ? `cart:${user.id}` : undefined);
-                    cacheClear(user ? `wishlist:${user.id}` : undefined);
-                    loadCart();
-                  }}
-                >
-                  <Text
-                    style={[styles.wishlistText, { color: colors.primary }]}
-                  >
-                    ❤️ Move to Wishlist
-                  </Text>
-                </Pressable>
-              </View>
+            <Text
+              style={[
+                styles.payNote,
+                { color: colors.textSecondary, marginTop: spacing.sm },
+              ]}
+            >
+              Online payment is currently unavailable.
+            </Text>
+          </Card>
 
-              {/* Total Amount */}
-              <Text style={[styles.itemTotal, { color: colors.textPrimary }]}>
-                ₹{(i.quantity * price).toFixed(2)}
+          {/* CARD 4: BILL DETAILS */}
+          <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+            Bill Details
+          </Text>
+          <Card
+            style={{
+              marginBottom: spacing.lg,
+              backgroundColor: colors.cardBG,
+              borderColor: colors.border,
+            }}
+          >
+            <Text style={[styles.billTitle, { color: colors.textPrimary }]}>
+              Bill Details
+            </Text>
+
+            <BillRow label="Total MRP" value={`₹${calculateMRP()}`} />
+            <BillRow
+              label="You Saved"
+              value={`-₹${calculateSavings()}`}
+              highlight
+            />
+            <BillRow label="Delivery Charge" value="₹0" />
+            <BillRow label="Handling Charge" value="₹0" />
+            <BillRow label="Grand Total" value={`₹${grandTotal}`} bold />
+          </Card>
+
+          {/* PLACE ORDER */}
+          <>
+            <Button
+              block
+              onPress={handleOrder}
+              style={{ marginTop: spacing.sm }}
+              disabled={
+                (store && store.is_ordering_enabled === false) ||
+                (Number(storeSettings?.min_order_amount || 0) > 0 &&
+                  grandTotal < Number(storeSettings?.min_order_amount || 0))
+              }
+            >
+              Place Order
+            </Button>
+            {store && store.is_ordering_enabled === false ? (
+              <Text
+                style={{
+                  color: colors.textSecondary,
+                  marginTop: spacing.sm,
+                  textAlign: "center",
+                }}
+              >
+                Ordering is currently disabled. Please try again later.
               </Text>
-            </View>
-          );
-        })}
-      </Card>
-
-      {/* CARD 3: PAYMENT OPTIONS */}
-      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-        Payment Options
-      </Text>
-      <Card
-        style={{
-          marginBottom: spacing.lg,
-          backgroundColor: colors.cardBG,
-          borderColor: colors.border,
-        }}
-      >
-        <RadioGroup
-          value={paymentMethod}
-          onChange={(val) => setPaymentMethod(val)}
-          options={[
-            { value: "cod", label: "Cash on Delivery (COD)", disabled: false },
-            {
-              value: "online",
-              label: "Online Payment",
-              disabled: true,
-              note: "Unavailable",
-            },
-          ]}
-          direction="column"
-          size="md"
-        />
-
-        <Text
-          style={[
-            styles.payNote,
-            { color: colors.textSecondary, marginTop: spacing.sm },
-          ]}
-        >
-          Online payment is currently unavailable.
-        </Text>
-      </Card>
-
-      {/* CARD 4: BILL DETAILS */}
-      <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
-        Bill Details
-      </Text>
-      <Card
-        style={{
-          marginBottom: spacing.lg,
-          backgroundColor: colors.cardBG,
-          borderColor: colors.border,
-        }}
-      >
-        <Text style={[styles.billTitle, { color: colors.textPrimary }]}>
-          Bill Details
-        </Text>
-
-        <BillRow label="Total MRP" value={`₹${calculateMRP()}`} />
-        <BillRow
-          label="You Saved"
-          value={`-₹${calculateSavings()}`}
-          highlight
-        />
-        <BillRow label="Delivery Charge" value="₹0" />
-        <BillRow label="Handling Charge" value="₹0" />
-        <BillRow label="Grand Total" value={`₹${grandTotal}`} bold />
-      </Card>
-
-      {/* PLACE ORDER */}
-      <Button block onPress={handleOrder} style={{ marginTop: spacing.sm }}>
-        Place Order
-      </Button>
+            ) : (
+              (() => {
+                const minAmt = Number(storeSettings?.min_order_amount || 0);
+                if (minAmt > 0 && grandTotal < minAmt) {
+                  return (
+                    <Text
+                      style={{
+                        color: colors.textSecondary,
+                        marginTop: spacing.sm,
+                        textAlign: "center",
+                      }}
+                    >
+                      {`Minimum order amount is ₹${minAmt}`}
+                    </Text>
+                  );
+                }
+                return null;
+              })()
+            )}
+          </>
+        </>
+      )}
 
       <View style={{ height: spacing.xxl }} />
     </ScrollView>
