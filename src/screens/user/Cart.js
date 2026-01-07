@@ -340,6 +340,24 @@ export default function Cart() {
 
   const grandTotal = calculateTotal();
 
+  // Handling charge from store settings (treat null/undefined/NaN as 0)
+  const handlingCharge = (() => {
+    const val = Number(storeSettings?.handling_charge ?? 0);
+    return Number.isFinite(val) ? val : 0;
+  })();
+
+  // Surge settings from storeSettings
+  const surgeMode = !!storeSettings?.surge_mode;
+  const surgeCharge = (() => {
+    const v = Number(storeSettings?.surge_charge ?? 0);
+    return Number.isFinite(v) ? v : 0;
+  })();
+  const surgeMessage = (storeSettings?.surge_message || "").trim();
+
+  // Final payable amount = cart subtotal + handling charge + surge (when active)
+  const payableTotal =
+    grandTotal + handlingCharge + (surgeMode ? surgeCharge : 0);
+
   // -----------------------------
   // EMPTY CART UI
   // -----------------------------
@@ -715,9 +733,27 @@ export default function Cart() {
               highlight
             />
             <BillRow label="Delivery Charge" value="₹0" />
-            <BillRow label="Handling Charge" value="₹0" />
-            <BillRow label="Grand Total" value={`₹${grandTotal}`} bold />
+            {handlingCharge > 0 && (
+              <BillRow label="Handling Charges" value={`₹${handlingCharge}`} />
+            )}
+            {surgeMode && surgeCharge > 0 && (
+              <BillRow label="Surge Charges" value={`₹${surgeCharge}`} />
+            )}
+            <BillRow label="Grand Total" value={`₹${payableTotal}`} bold />
           </Card>
+
+          {/* SURGE BANNER (non-blocking) */}
+          {surgeMode && (
+            <Card
+              variant="warning"
+              style={{ marginTop: spacing.sm, padding: spacing.sm }}
+            >
+              <Text style={{ color: colors.gray900 }}>
+                {surgeMessage ||
+                  "High demand surge charges are currently applied."}
+              </Text>
+            </Card>
+          )}
 
           {/* PLACE ORDER */}
           <>
