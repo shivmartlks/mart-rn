@@ -14,6 +14,7 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import { IMAGES } from "../../const/imageConst";
 import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import Card from "../../components/ui/Card";
 import Divider from "../../components/ui/Divider";
@@ -368,15 +369,14 @@ export default function Wishlist() {
                     >
                       ₹{mrp}
                     </Text>
-                    <Text
-                      style={{
-                        fontSize: textSizes.xs,
-                        color: colors.success,
-                        fontWeight: fontWeights.semibold,
-                      }}
-                    >
-                      {discount}% OFF
-                    </Text>
+                    {discount > 0 && (
+                      <Badge
+                        size="sm"
+                        variant="success"
+                        label={`${discount}% OFF`}
+                        style={styles.discountBadge}
+                      />
+                    )}
                   </View>
 
                   {/* ACTION BUTTONS */}
@@ -414,3 +414,13 @@ export default function Wishlist() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  noProductsText: {
+    color: colors.textSecondary,
+  },
+
+  discountBadge: {
+    marginLeft: 6,
+  },
+});

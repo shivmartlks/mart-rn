@@ -13,6 +13,7 @@ import { supabase } from "../../services/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
 import QuantitySelector from "../../components/ui/QuantitySelector";
 import RadioGroup from "../../components/ui/RadioGroup";
 import Card from "../../components/ui/Card";
@@ -362,7 +363,7 @@ export default function Cart() {
   const includeSurge =
     surgeMode &&
     surgeCharge > 0 &&
-    store?.is_ordering_enabled !== false &&
+    storeSettings?.is_ordering_enabled !== false &&
     isStoreOpen;
 
   const payableTotal =
@@ -629,9 +630,14 @@ export default function Cart() {
                       >
                         ₹{mrp}
                       </Text>
-                      <Text style={[styles.itemOff, { color: colors.success }]}>
-                        {discount}% OFF
-                      </Text>
+                      {discount > 0 && (
+                        <Badge
+                          size="sm"
+                          variant="success"
+                          label={`${discount}% OFF`}
+                          style={styles.discountBadge}
+                        />
+                      )}
                     </View>
 
                     {/* Quantity Using NEW COMPONENT */}
@@ -750,7 +756,7 @@ export default function Cart() {
             )}
             {surgeMode &&
               surgeCharge > 0 &&
-              store?.is_ordering_enabled !== false &&
+              storeSettings?.is_ordering_enabled !== false &&
               isStoreOpen && (
                 <BillRow label="Surge Charges" value={`₹${surgeCharge}`} />
               )}
@@ -764,7 +770,7 @@ export default function Cart() {
                 {closedMessage || "Store is currently closed"}
               </Text>
             </Card>
-          ) : store && store.is_ordering_enabled === false ? (
+          ) : storeSettings?.is_ordering_enabled === false ? (
             <Card variant="danger" style={{ marginBottom: spacing.sm }}>
               <Text style={{ color: colors.textPrimary }}>
                 Ordering is currently disabled. Please try again later.
@@ -797,7 +803,7 @@ export default function Cart() {
               onPress={handleOrder}
               style={{ marginTop: spacing.sm }}
               disabled={
-                (store && store.is_ordering_enabled === false) ||
+                (storeSettings?.is_ordering_enabled === false) ||
                 isStoreOpen === false ||
                 (minAmt > 0 && grandTotal < minAmt)
               }
@@ -895,6 +901,10 @@ const styles = StyleSheet.create({
     textDecorationLine: "line-through",
   },
   itemOff: { fontSize: textSizes.sm, fontWeight: fontWeights.semibold },
+
+  discountBadge: {
+    marginLeft: spacing.xs,
+  },
 
   wishlistText: { marginTop: spacing.xs, fontSize: textSizes.sm },
 

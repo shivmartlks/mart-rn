@@ -114,9 +114,9 @@ export function ActiveStoreProvider({ children }) {
         .maybeSingle();
 
       if (data) {
-        // prefer is_ordering_enabled from store_settings when available; will merge after loading store_settings
+        // set store (structural info only)
         setStore(data);
-        // fetch store_settings for this store id
+        // fetch store_settings for this store id and keep it separate
         try {
           const { data: ss } = await supabase
             .from("store_settings")
@@ -125,12 +125,6 @@ export function ActiveStoreProvider({ children }) {
             .maybeSingle();
           setStoreSettings(ss || null);
           storeSettingsRef.current = ss || null;
-          // merge ordering flag from settings into the store object so consumers reading store.is_ordering_enabled get the right value
-          setStore((prev) => ({
-            ...(prev || {}),
-            is_ordering_enabled:
-              ss?.is_ordering_enabled ?? prev?.is_ordering_enabled,
-          }));
         } catch (err) {
           console.error(
             "ActiveStoreProvider: failed to load store_settings",
@@ -150,7 +144,7 @@ export function ActiveStoreProvider({ children }) {
       if (data) {
         setStore(data);
         if (data.id) await AsyncStorage.setItem(STORE_KEY, data.id);
-        // fetch store_settings for this store id
+        // fetch store_settings for this store id and keep it separate
         try {
           const { data: ss } = await supabase
             .from("store_settings")
@@ -159,12 +153,6 @@ export function ActiveStoreProvider({ children }) {
             .maybeSingle();
           setStoreSettings(ss || null);
           storeSettingsRef.current = ss || null;
-          // merge ordering flag from settings into the store object
-          setStore((prev) => ({
-            ...(prev || {}),
-            is_ordering_enabled:
-              ss?.is_ordering_enabled ?? prev?.is_ordering_enabled,
-          }));
         } catch (err) {
           console.error(
             "ActiveStoreProvider: failed to load store_settings",
@@ -195,12 +183,6 @@ export function ActiveStoreProvider({ children }) {
         .maybeSingle();
       setStoreSettings(ss || null);
       storeSettingsRef.current = ss || null;
-      // merge ordering flag into store
-      setStore((prev) => ({
-        ...(prev || {}),
-        is_ordering_enabled:
-          ss?.is_ordering_enabled ?? prev?.is_ordering_enabled,
-      }));
     } catch (err) {
       console.error(
         "ActiveStoreProvider: failed to load store_settings on setActiveStore",
@@ -257,14 +239,6 @@ export function ActiveStoreProvider({ children }) {
                 .maybeSingle();
               setStoreSettings(ss || null);
               storeSettingsRef.current = ss || null;
-              if (data) {
-                // merge ordering flag from refreshed settings into the store object
-                setStore((prev) => ({
-                  ...(prev || {}),
-                  is_ordering_enabled:
-                    ss?.is_ordering_enabled ?? prev?.is_ordering_enabled,
-                }));
-              }
             } catch (err) {
               console.error(
                 "ActiveStoreProvider: failed to refresh store_settings",

@@ -22,6 +22,7 @@ import { supabase, SUPABASE_URL } from "../../services/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import QuantitySelector from "../../components/ui/QuantitySelector";
 import Button from "../../components/ui/Button";
+import Badge from "../../components/ui/Badge";
 import { IMAGES } from "../../const/imageConst";
 import { colors, spacing, textSizes, fontWeights } from "../../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -311,7 +312,11 @@ export default function ProductDetails() {
               <Text style={styles.mrp}>₹{viewProduct.mrp}</Text>
             ) : null}
             {discountPercent > 0 ? (
-              <Text style={styles.discountTag}>{discountPercent}% OFF</Text>
+              <Badge
+                variant="success"
+                label={`${discountPercent}% OFF`}
+                style={styles.discountBadge}
+              />
             ) : null}
           </View>
 
@@ -521,6 +526,9 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
     color: colors.success,
     fontWeight: fontWeights.semibold,
+  },
+  discountBadge: {
+    marginLeft: spacing.xs,
   },
   limited: { color: colors.warning, marginTop: spacing.xs },
   outOfStock: {
