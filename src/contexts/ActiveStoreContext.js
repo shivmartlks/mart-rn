@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+} from "react";
 import { supabase } from "../services/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { fetchStoreSettings } from "../api/storeApi";
@@ -16,6 +23,78 @@ export function ActiveStoreProvider({ children }) {
   const storeRef = useRef(null);
   const [storeSettings, setStoreSettings] = useState(null);
   const storeSettingsRef = useRef(null);
+
+  // Compute store open/closed status from store.open_time and store.close_time
+  const { isStoreOpen, closedMessage } = useMemo(() => {
+    const ot = store?.open_time ?? null;
+    const ct = store?.close_time ?? null;
+
+    // If either missing, treat as always open
+    if (!ot || !ct) return { isStoreOpen: true, closedMessage: null };
+
+    // Flexible parser: accepts 'HH:MM' (24h) or 'h', 'h AM/PM', 'h:mm AM/PM'
+    const parse = (t) => {
+      if (typeof t !== "string") return null;
+      const s = t.trim();
+
+      // 1) Try 24-hour HH:MM
+      const hhmm = s.match(/^(\d{1,2}):(\d{1,2})$/);
+      if (hhmm) {
+        const h = parseInt(hhmm[1], 10);
+        const m = parseInt(hhmm[2], 10);
+        if (h >= 0 && h < 24 && m >= 0 && m < 60) return { h, m };
+        return null;
+      }
+
+      // 2) Try 12-hour with optional minutes and AM/PM (e.g. '11', '11 AM', '11:30 PM')
+      const ampm = s.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM|am|pm)?$/);
+      if (ampm) {
+        let h = parseInt(ampm[1], 10);
+        const m = ampm[2] ? parseInt(ampm[2], 10) : 0;
+        const period = ampm[3] ? ampm[3].toUpperCase() : null;
+        if (period) {
+          if (h === 12) h = period === "AM" ? 0 : 12;
+          else if (period === "PM") h = h + 12;
+        }
+        if (h >= 0 && h < 24 && m >= 0 && m < 60) return { h, m };
+      }
+
+      return null;
+    };
+
+    const o = parse(ot);
+    const c = parse(ct);
+    if (!o || !c) return { isStoreOpen: true, closedMessage: null };
+
+    const now = new Date();
+    const openDt = new Date(now);
+    openDt.setHours(o.h, o.m, 0, 0);
+    const closeDt = new Date(now);
+    closeDt.setHours(c.h, c.m, 0, 0);
+
+    const fmt = ({ h, m }) => {
+      const period = h >= 12 ? "PM" : "AM";
+      const hour12 = h % 12 === 0 ? 12 : h % 12;
+      const min = String(m).padStart(2, "0");
+      return `${hour12}:${min} ${period}`;
+    };
+
+    if (now < openDt) {
+      return {
+        isStoreOpen: false,
+        closedMessage: `Please come back at ${fmt(o)}`,
+      };
+    }
+
+    if (now >= closeDt) {
+      return {
+        isStoreOpen: false,
+        closedMessage: `We’ll be back tomorrow at ${fmt(o)}`,
+      };
+    }
+
+    return { isStoreOpen: true, closedMessage: null };
+  }, [store]);
 
   useEffect(() => {
     initStore();
@@ -35,6 +114,7 @@ export function ActiveStoreProvider({ children }) {
         .maybeSingle();
 
       if (data) {
+        // prefer is_ordering_enabled from store_settings when available; will merge after loading store_settings
         setStore(data);
         // fetch store_settings for this store id
         try {
@@ -45,6 +125,12 @@ export function ActiveStoreProvider({ children }) {
             .maybeSingle();
           setStoreSettings(ss || null);
           storeSettingsRef.current = ss || null;
+          // merge ordering flag from settings into the store object so consumers reading store.is_ordering_enabled get the right value
+          setStore((prev) => ({
+            ...(prev || {}),
+            is_ordering_enabled:
+              ss?.is_ordering_enabled ?? prev?.is_ordering_enabled,
+          }));
         } catch (err) {
           console.error(
             "ActiveStoreProvider: failed to load store_settings",
@@ -73,6 +159,12 @@ export function ActiveStoreProvider({ children }) {
             .maybeSingle();
           setStoreSettings(ss || null);
           storeSettingsRef.current = ss || null;
+          // merge ordering flag from settings into the store object
+          setStore((prev) => ({
+            ...(prev || {}),
+            is_ordering_enabled:
+              ss?.is_ordering_enabled ?? prev?.is_ordering_enabled,
+          }));
         } catch (err) {
           console.error(
             "ActiveStoreProvider: failed to load store_settings",
@@ -103,6 +195,12 @@ export function ActiveStoreProvider({ children }) {
         .maybeSingle();
       setStoreSettings(ss || null);
       storeSettingsRef.current = ss || null;
+      // merge ordering flag into store
+      setStore((prev) => ({
+        ...(prev || {}),
+        is_ordering_enabled:
+          ss?.is_ordering_enabled ?? prev?.is_ordering_enabled,
+      }));
     } catch (err) {
       console.error(
         "ActiveStoreProvider: failed to load store_settings on setActiveStore",
@@ -159,6 +257,14 @@ export function ActiveStoreProvider({ children }) {
                 .maybeSingle();
               setStoreSettings(ss || null);
               storeSettingsRef.current = ss || null;
+              if (data) {
+                // merge ordering flag from refreshed settings into the store object
+                setStore((prev) => ({
+                  ...(prev || {}),
+                  is_ordering_enabled:
+                    ss?.is_ordering_enabled ?? prev?.is_ordering_enabled,
+                }));
+              }
             } catch (err) {
               console.error(
                 "ActiveStoreProvider: failed to refresh store_settings",
@@ -185,6 +291,8 @@ export function ActiveStoreProvider({ children }) {
         storeId: store?.id,
         loading,
         storeSettings,
+        isStoreOpen,
+        closedMessage,
         setActiveStore,
       }}
     >

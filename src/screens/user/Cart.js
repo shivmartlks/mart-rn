@@ -23,15 +23,19 @@ import { placeOrder } from "../../services/placeOrder";
 import CartEmptySvg from "../../../assets/cart_empty.svg";
 import { cacheGet, cacheSet, cacheClear } from "../../services/cache";
 import { fetchProductWithAttributes } from "../../services/adminApi";
-
-// Theme tokens (use your theme module)
 import { colors, spacing, textSizes, fontWeights, radii } from "../../theme";
 import { useActiveStore } from "../../contexts/ActiveStoreContext";
 
 export default function Cart() {
   const navigation = useNavigation();
   const { user } = useAuth();
-  const { store, loading: storeLoading, storeSettings } = useActiveStore();
+  const {
+    store,
+    loading: storeLoading,
+    storeSettings,
+    isStoreOpen,
+    closedMessage,
+  } = useActiveStore();
 
   const [cartItems, setCartItems] = useState([]);
   const [defaultAddress, setDefaultAddress] = useState(null);
@@ -354,9 +358,17 @@ export default function Cart() {
   })();
   const surgeMessage = (storeSettings?.surge_message || "").trim();
 
-  // Final payable amount = cart subtotal + handling charge + surge (when active)
+  // Final payable amount = cart subtotal + handling charge + surge (when active and ordering allowed)
+  const includeSurge =
+    surgeMode &&
+    surgeCharge > 0 &&
+    store?.is_ordering_enabled !== false &&
+    isStoreOpen;
+
   const payableTotal =
-    grandTotal + handlingCharge + (surgeMode ? surgeCharge : 0);
+    grandTotal + handlingCharge + (includeSurge ? surgeCharge : 0);
+
+  const minAmt = Number(storeSettings?.min_order_amount || 0);
 
   // -----------------------------
   // EMPTY CART UI
@@ -736,23 +748,46 @@ export default function Cart() {
             {handlingCharge > 0 && (
               <BillRow label="Handling Charges" value={`₹${handlingCharge}`} />
             )}
-            {surgeMode && surgeCharge > 0 && (
-              <BillRow label="Surge Charges" value={`₹${surgeCharge}`} />
-            )}
+            {surgeMode &&
+              surgeCharge > 0 &&
+              store?.is_ordering_enabled !== false &&
+              isStoreOpen && (
+                <BillRow label="Surge Charges" value={`₹${surgeCharge}`} />
+              )}
             <BillRow label="Grand Total" value={`₹${payableTotal}`} bold />
           </Card>
 
-          {/* SURGE BANNER (non-blocking) */}
-          {surgeMode && (
-            <Card
-              variant="warning"
-              style={{ marginTop: spacing.sm, padding: spacing.sm }}
-            >
-              <Text style={{ color: colors.gray900 }}>
-                {surgeMessage ||
-                  "High demand surge charges are currently applied."}
+          {/* MESSAGES (Badges) - placed above the Place Order button */}
+          {!isStoreOpen ? (
+            <Card variant="warning" style={{ marginBottom: spacing.sm }}>
+              <Text style={{ color: colors.warning }}>
+                {closedMessage || "Store is currently closed"}
               </Text>
             </Card>
+          ) : store && store.is_ordering_enabled === false ? (
+            <Card variant="danger" style={{ marginBottom: spacing.sm }}>
+              <Text style={{ color: colors.textPrimary }}>
+                Ordering is currently disabled. Please try again later.
+              </Text>
+            </Card>
+          ) : (
+            <>
+              {minAmt > 0 && grandTotal < minAmt && (
+                <Card variant="muted" style={{ marginBottom: spacing.sm }}>
+                  <Text
+                    style={{ color: colors.textSecondary }}
+                  >{`Minimum order amount is ₹${minAmt}`}</Text>
+                </Card>
+              )}
+
+              {surgeMode && surgeCharge > 0 && (
+                <Card variant="warning" style={{ marginBottom: spacing.sm }}>
+                  <Text style={{ color: colors.textPrimary }}>
+                    {surgeMessage || `Surge Charges: ₹${surgeCharge}`}
+                  </Text>
+                </Card>
+              )}
+            </>
           )}
 
           {/* PLACE ORDER */}
@@ -763,41 +798,12 @@ export default function Cart() {
               style={{ marginTop: spacing.sm }}
               disabled={
                 (store && store.is_ordering_enabled === false) ||
-                (Number(storeSettings?.min_order_amount || 0) > 0 &&
-                  grandTotal < Number(storeSettings?.min_order_amount || 0))
+                isStoreOpen === false ||
+                (minAmt > 0 && grandTotal < minAmt)
               }
             >
               Place Order
             </Button>
-            {store && store.is_ordering_enabled === false ? (
-              <Text
-                style={{
-                  color: colors.textSecondary,
-                  marginTop: spacing.sm,
-                  textAlign: "center",
-                }}
-              >
-                Ordering is currently disabled. Please try again later.
-              </Text>
-            ) : (
-              (() => {
-                const minAmt = Number(storeSettings?.min_order_amount || 0);
-                if (minAmt > 0 && grandTotal < minAmt) {
-                  return (
-                    <Text
-                      style={{
-                        color: colors.textSecondary,
-                        marginTop: spacing.sm,
-                        textAlign: "center",
-                      }}
-                    >
-                      {`Minimum order amount is ₹${minAmt}`}
-                    </Text>
-                  );
-                }
-                return null;
-              })()
-            )}
           </>
         </>
       )}
