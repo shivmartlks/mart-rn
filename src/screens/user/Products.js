@@ -29,6 +29,7 @@ import QuantitySelector from "../../components/ui/QuantitySelector";
 import DefaultProduct from "../../../assets/default_product.svg";
 import { cacheGet, cacheSet } from "../../services/cache";
 import { cacheClear } from "../../services/cache";
+import Badge from "../../components/ui/Badge";
 
 // Theme tokens
 import { colors, spacing, textSizes, radii, fontWeights } from "../../theme";
@@ -180,11 +181,9 @@ export default function Products() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ marginTop: spacing.sm, color: colors.textSecondary }}>
-          Loading products...
-        </Text>
+        <Text style={styles.loadingText}>Loading products...</Text>
       </View>
     );
   }
@@ -205,7 +204,12 @@ export default function Products() {
     const isLowStock = (p._stock_value ?? 0) < 5 && (p._stock_value ?? 0) > 0;
 
     return (
-      <View style={[styles.productCard, isOutOfStock && { opacity: 0.5 }]}>
+      <View
+        style={[
+          styles.productCard,
+          isOutOfStock && styles.productCardOutOfStock,
+        ]}
+      >
         {/* Make image area pressable to open Product Details */}
         <Pressable
           style={styles.imageWrapper}
@@ -239,7 +243,7 @@ export default function Products() {
               size="sm"
               onIncrease={() => handleAdd(p)}
               onDecrease={() => handleRemove(p)}
-              style={{ position: "absolute", bottom: 8, right: 8 }}
+              style={styles.floatingControl}
               disableIncrease={qty >= (p._stock_value ?? 0)}
             />
           )}
@@ -261,7 +265,12 @@ export default function Products() {
           <Text style={styles.price}>₹{p.price}</Text>
           <Text style={styles.mrp}>₹{mrp}</Text>
           {discount > 0 && (
-            <Text style={styles.discountBadge}>{discount}% OFF</Text>
+            <Badge
+              size="sm"
+              variant="success"
+              label={`${discount}% OFF`}
+              style={styles.discountBadge}
+            />
           )}
         </View>
 
@@ -319,7 +328,7 @@ export default function Products() {
                   name="bar-chart-2"
                   size={16}
                   color={colors.textPrimary}
-                  style={{ transform: [{ rotate: "90deg" }] }}
+                  style={styles.iconRotated}
                 />
               </TouchableOpacity>
             </View>
@@ -328,7 +337,7 @@ export default function Products() {
           {/* Product Grid */}
           {filteredProducts.length === 0 ? (
             <View style={styles.center}>
-              <Text style={{ color: colors.textSecondary }}>
+              <Text style={styles.noProductsText}>
                 No products available in this group.
               </Text>
             </View>
@@ -339,14 +348,8 @@ export default function Products() {
               keyExtractor={(item) => item.id.toString()}
               numColumns={2}
               scrollEnabled={true}
-              contentContainerStyle={{
-                paddingHorizontal: spacing.sm,
-                paddingBottom: spacing.xxl,
-              }}
-              columnWrapperStyle={{
-                justifyContent: "space-between",
-                marginBottom: spacing.sm,
-              }}
+              contentContainerStyle={styles.listContent}
+              columnWrapperStyle={styles.columnWrapper}
             />
           )}
         </View>
@@ -354,28 +357,13 @@ export default function Products() {
 
       {/* Floating Cart Button with safe area + reserved footer space */}
       {cartCount > 0 && (
-        <SafeAreaView
-          edges={["bottom"]}
-          style={{ position: "absolute", left: 0, right: 0, bottom: 0 }}
-        >
-          <View
-            style={{
-              paddingBottom: spacing.lg /* reserved footer CTA space */,
-            }}
-          >
+        <SafeAreaView edges={["bottom"]} style={styles.footerSafeArea}>
+          <View style={styles.footerReserved}>
             <Button
               onPress={() =>
                 navigation.navigate("UserTabs", { screen: "Cart" })
               }
-              style={{
-                alignSelf: "flex-end",
-                marginRight: spacing.lg,
-                backgroundColor: colors.primary,
-                paddingVertical: spacing.sm,
-                paddingHorizontal: spacing.lg,
-                borderRadius: 28,
-                elevation: 6,
-              }}
+              style={styles.footerButton}
             >
               {`${cartCount} items in Cart`}
             </Button>
@@ -403,6 +391,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  loadingContainer: {
+    backgroundColor: colors.background,
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: spacing.sm,
+    color: colors.textSecondary,
   },
 
   // Sidebar (Left Pane)
@@ -460,6 +458,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginLeft: spacing.xs,
+  },
+  iconRotated: {
+    transform: [{ rotate: "90deg" }],
   },
 
   productCard: {
@@ -519,14 +520,7 @@ const styles = StyleSheet.create({
   },
 
   discountBadge: {
-    backgroundColor: colors.successBg || colors.success + "22",
-    color: colors.success,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    fontSize: textSizes.xs,
-    fontWeight: fontWeights.semibold,
-    alignSelf: "flex-start",
+    marginLeft: spacing.xs,
   },
 
   priceRow: {
@@ -603,5 +597,41 @@ const styles = StyleSheet.create({
     color: colors.white50,
     fontSize: textSizes.sm,
     fontWeight: fontWeights.bold,
+  },
+
+  listContent: {
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.xxl,
+  },
+  columnWrapper: {
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
+
+  productCardOutOfStock: {
+    opacity: 0.5,
+  },
+
+  noProductsText: {
+    color: colors.textSecondary,
+  },
+
+  footerSafeArea: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  footerReserved: {
+    paddingBottom: spacing.lg,
+  },
+  footerButton: {
+    alignSelf: "flex-end",
+    marginRight: spacing.lg,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 28,
+    elevation: 6,
   },
 });
