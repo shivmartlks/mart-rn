@@ -118,6 +118,18 @@ export default function OrderDetails() {
             size="md"
           />
         </View>
+        {order.order_remarks &&
+          String(order.order_remarks).trim().length > 0 && (
+            <Text
+              style={{
+                marginTop: spacing.xs,
+                color: colors.textSecondary,
+                fontSize: textSizes.sm,
+              }}
+            >
+              {order.order_remarks}
+            </Text>
+          )}
         <Text
           style={{
             marginTop: spacing.xs,
@@ -159,7 +171,7 @@ export default function OrderDetails() {
           <View key={idx} style={styles.itemRow}>
             <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.itemQty}>
-              ₹{item.price} × {item.qty}
+              ₹{item.price} × {item.quantity || item.qty || 0}
             </Text>
           </View>
         ))}
