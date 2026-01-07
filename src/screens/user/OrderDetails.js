@@ -41,9 +41,10 @@ export default function OrderDetails() {
     if (cacheKey) {
       const cached = cacheGet(cacheKey);
       if (cached) {
+        // show cached immediately but always reconcile with fresh DB value
         setOrder(cached);
         setLoading(false);
-        return;
+        // do not return; fetch latest below
       }
     }
 
