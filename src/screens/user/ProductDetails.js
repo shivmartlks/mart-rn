@@ -31,13 +31,16 @@ import { cacheClear } from "../../services/cache";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { fetchProductWithAttributes } from "../../services/adminApi";
 import { useWindowDimensions } from "react-native";
+import { addRecentlyViewed } from "../../services/recentlyViewed";
 
 export default function ProductDetails() {
   const route = useRoute();
   const navigation = useNavigation();
   const { user } = useAuth();
-  const productParam = route.params?.product;
-  const productId = productParam?.id;
+  // Support both shapes: { product } OR { productId } (or { id })
+  const productParam = route.params?.product ?? null;
+  const rawProductId = route.params?.productId ?? route.params?.id ?? null;
+  const productId = productParam?.id ?? rawProductId;
   const productKey = productId ? `product:${productId}` : null;
   const cartQtyKey =
     productId && user?.id ? `cartqty:${user.id}:${productId}` : null;
@@ -90,6 +93,8 @@ export default function ProductDetails() {
       const cached = productKey ? cacheGet(productKey) : null;
       if (cached) {
         setViewProduct(cached);
+        // record view (id only)
+        addRecentlyViewed(productId).catch(() => {});
         return;
       }
       // Fetch only core product and images
@@ -120,6 +125,8 @@ export default function ProductDetails() {
         _stock_value: inv?.stock_value ?? 0,
       };
       setViewProduct(finalProduct);
+      // record view (id only)
+      addRecentlyViewed(productId).catch(() => {});
       if (productKey) cacheSet(productKey, finalProduct);
     }
     init();
