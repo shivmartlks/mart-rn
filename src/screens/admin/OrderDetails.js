@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, ScrollView, ActivityIndicator, Alert } from "react-native";
+import Toast from "react-native-toast-message";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { supabase } from "../../services/supabase";
 import Card from "../../components/ui/Card";
@@ -66,12 +67,34 @@ export default function OrderDetails() {
     try {
       setSaving(true);
 
-      await updateOrderStatus(id, selectedStatus, remarks);
+      const res = await updateOrderStatus(id, selectedStatus, remarks);
+
+      if (res?.error) {
+        const err = res.error;
+        const msg =
+          err?.message ||
+          err?.details ||
+          JSON.stringify(err) ||
+          "Failed to update order";
+        Toast.show({
+          type: "error",
+          text1: "Failed to update order",
+          text2: msg,
+          visibilityTime: 5000,
+        });
+        return;
+      }
 
       // Reload order to sync UI
       await loadOrder();
     } catch (e) {
-      Alert.alert("Error", "Failed to update order");
+      const msg = e?.message || String(e);
+      Toast.show({
+        type: "error",
+        text1: "Failed to update order",
+        text2: msg,
+        visibilityTime: 5000,
+      });
     } finally {
       setSaving(false);
     }
