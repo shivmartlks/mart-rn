@@ -12,6 +12,7 @@ import ProductDetails from "../screens/user/ProductDetails";
 import Wishlist from "../screens/user/Wishlist";
 import Orders from "../screens/user/Orders";
 import OrderSuccess from "../screens/user/OrderSuccess";
+import Search from "../screens/user/Search";
 
 const Stack = createNativeStackNavigator();
 
@@ -40,6 +41,12 @@ export default function UserStack() {
         name="ProductDetails"
         component={ProductDetails}
         options={{ header: () => <Header title="Product Details" showBack /> }}
+      />
+
+      <Stack.Screen
+        name="Search"
+        component={Search}
+        options={{ header: () => <Header title="Search" showBack /> }}
       />
 
       <Stack.Screen
