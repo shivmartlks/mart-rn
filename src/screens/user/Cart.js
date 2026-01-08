@@ -36,6 +36,11 @@ export default function Cart() {
     storeSettings,
     isStoreOpen,
     closedMessage,
+    homeAlert,
+    includeSurge,
+    surgeCharge,
+    surgeMessage,
+    surgeMode,
   } = useActiveStore();
 
   const [cartItems, setCartItems] = useState([]);
@@ -350,21 +355,6 @@ export default function Cart() {
     const val = Number(storeSettings?.handling_charge ?? 0);
     return Number.isFinite(val) ? val : 0;
   })();
-
-  // Surge settings from storeSettings
-  const surgeMode = !!storeSettings?.surge_mode;
-  const surgeCharge = (() => {
-    const v = Number(storeSettings?.surge_charge ?? 0);
-    return Number.isFinite(v) ? v : 0;
-  })();
-  const surgeMessage = (storeSettings?.surge_message || "").trim();
-
-  // Final payable amount = cart subtotal + handling charge + surge (when active and ordering allowed)
-  const includeSurge =
-    surgeMode &&
-    surgeCharge > 0 &&
-    storeSettings?.is_ordering_enabled !== false &&
-    isStoreOpen;
 
   const payableTotal =
     grandTotal + handlingCharge + (includeSurge ? surgeCharge : 0);
@@ -754,47 +744,74 @@ export default function Cart() {
             {handlingCharge > 0 && (
               <BillRow label="Handling Charges" value={`₹${handlingCharge}`} />
             )}
-            {surgeMode &&
-              surgeCharge > 0 &&
-              storeSettings?.is_ordering_enabled !== false &&
-              isStoreOpen && (
-                <BillRow label="Surge Charges" value={`₹${surgeCharge}`} />
-              )}
+            {includeSurge && surgeCharge > 0 && (
+              <BillRow label="Surge Charges" value={`₹${surgeCharge}`} />
+            )}
             <BillRow label="Grand Total" value={`₹${payableTotal}`} bold />
           </Card>
 
           {/* MESSAGES (Badges) - placed above the Place Order button */}
-          {!isStoreOpen ? (
-            <Card variant="warning" style={{ marginBottom: spacing.sm }}>
-              <Text style={{ color: colors.warning }}>
-                {closedMessage || "Store is currently closed"}
-              </Text>
-            </Card>
-          ) : storeSettings?.is_ordering_enabled === false ? (
-            <Card variant="danger" style={{ marginBottom: spacing.sm }}>
-              <Text style={{ color: colors.textPrimary }}>
-                Ordering is currently disabled. Please try again later.
-              </Text>
-            </Card>
-          ) : (
-            <>
-              {minAmt > 0 && grandTotal < minAmt && (
-                <Card variant="muted" style={{ marginBottom: spacing.sm }}>
+          {(() => {
+            // Priority: closed > ordering_disabled => single alert only
+            if (
+              homeAlert?.type === "closed" ||
+              homeAlert?.type === "ordering_disabled"
+            ) {
+              return (
+                <Card
+                  variant={homeAlert.variant}
+                  style={{ marginBottom: spacing.sm }}
+                >
                   <Text
-                    style={{ color: colors.textSecondary }}
-                  >{`Minimum order amount is ₹${minAmt}`}</Text>
-                </Card>
-              )}
-
-              {surgeMode && surgeCharge > 0 && (
-                <Card variant="warning" style={{ marginBottom: spacing.sm }}>
-                  <Text style={{ color: colors.textPrimary }}>
-                    {surgeMessage || `Surge Charges: ₹${surgeCharge}`}
+                    style={{
+                      color:
+                        homeAlert.type === "closed"
+                          ? colors.warning
+                          : colors.textPrimary,
+                    }}
+                  >
+                    {homeAlert.message}
                   </Text>
                 </Card>
-              )}
-            </>
-          )}
+              );
+            }
+
+            // Otherwise we can show min order and surge together.
+            const nodes = [];
+
+            if (minAmt > 0 && grandTotal < minAmt) {
+              // Show min order using same UI as surge (warning) per request
+              nodes.push(
+                <Card
+                  key="minAmt"
+                  variant={homeAlert?.variant || "warning"}
+                  style={{ marginBottom: spacing.sm }}
+                >
+                  <Text
+                    style={{ color: colors.textPrimary }}
+                  >{`Minimum order amount is ₹${minAmt}`}</Text>
+                </Card>
+              );
+            }
+
+            if (homeAlert && homeAlert.type === "surge") {
+              nodes.push(
+                <Card
+                  key="surge"
+                  variant={homeAlert.variant}
+                  style={{ marginBottom: spacing.sm }}
+                >
+                  <Text style={{ color: colors.textPrimary }}>
+                    {homeAlert.message}
+                  </Text>
+                </Card>
+              );
+            }
+
+            if (nodes.length) return nodes;
+
+            return null;
+          })()}
 
           {/* PLACE ORDER */}
           <>
@@ -803,7 +820,7 @@ export default function Cart() {
               onPress={handleOrder}
               style={{ marginTop: spacing.sm }}
               disabled={
-                (storeSettings?.is_ordering_enabled === false) ||
+                homeAlert?.type === "ordering_disabled" ||
                 isStoreOpen === false ||
                 (minAmt > 0 && grandTotal < minAmt)
               }

@@ -1,16 +1,40 @@
-import { ScrollView, StyleSheet } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useActiveStore } from "../../contexts/ActiveStoreContext";
+import Card from "../../components/ui/Card";
+import { colors, spacing, textSizes } from "../../theme";
 
 export default function Home() {
   const navigation = useNavigation();
+  const { homeAlert } = useActiveStore();
 
-  return <ScrollView style={styles.container}></ScrollView>;
+  return (
+    <ScrollView style={styles.container}>
+      {homeAlert ? (
+        <Card
+          variant={homeAlert.variant}
+          style={{ margin: spacing.md, marginBottom: spacing.md }}
+        >
+          <Text
+            style={{
+              color:
+                homeAlert.type === "closed"
+                  ? colors.warning
+                  : colors.textPrimary,
+              fontSize: textSizes.md,
+            }}
+          >
+            {homeAlert.message}
+          </Text>
+        </Card>
+      ) : null}
+    </ScrollView>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 0,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    flex: 1,
+    backgroundColor: colors.screenBG,
   },
 });

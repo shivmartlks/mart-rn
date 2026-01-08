@@ -37,21 +37,24 @@ export function ActiveStoreProvider({ children }) {
       if (typeof t !== "string") return null;
       const s = t.trim();
 
-      // 1) Try 24-hour HH:MM
-      const hhmm = s.match(/^(\d{1,2}):(\d{1,2})$/);
+      // 1) Try 24-hour HH:MM or HH:MM:SS (accept seconds but ignore them)
+      const hhmm = s.match(/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
       if (hhmm) {
         const h = parseInt(hhmm[1], 10);
         const m = parseInt(hhmm[2], 10);
+        // seconds present in hhmm[3] are ignored for scheduling purposes
         if (h >= 0 && h < 24 && m >= 0 && m < 60) return { h, m };
         return null;
       }
 
-      // 2) Try 12-hour with optional minutes and AM/PM (e.g. '11', '11 AM', '11:30 PM')
-      const ampm = s.match(/^(\d{1,2})(?::(\d{1,2}))?\s*(AM|PM|am|pm)?$/);
+      // 2) Try 12-hour with optional minutes/seconds and AM/PM (e.g. '11', '11 AM', '11:30 PM', '11:30:00 PM')
+      const ampm = s.match(
+        /^(\d{1,2})(?::(\d{1,2})(?::(\d{1,2}))?)?\s*(AM|PM|am|pm)?$/
+      );
       if (ampm) {
         let h = parseInt(ampm[1], 10);
         const m = ampm[2] ? parseInt(ampm[2], 10) : 0;
-        const period = ampm[3] ? ampm[3].toUpperCase() : null;
+        const period = ampm[4] ? ampm[4].toUpperCase() : null;
         if (period) {
           if (h === 12) h = period === "AM" ? 0 : 12;
           else if (period === "PM") h = h + 12;
@@ -95,6 +98,58 @@ export function ActiveStoreProvider({ children }) {
 
     return { isStoreOpen: true, closedMessage: null };
   }, [store]);
+
+  // Derived shared status: surge / ordering disabled / closed
+  const { homeAlert, includeSurge, surgeCharge, surgeMessage, surgeMode } =
+    useMemo(() => {
+      const ss = storeSettings || {};
+      const smode = !!ss.surge_mode;
+      const scharge = (() => {
+        const v = Number(ss.surge_charge ?? 0);
+        return Number.isFinite(v) ? v : 0;
+      })();
+      const smessage = (ss.surge_message || "").trim();
+
+      const incSurge =
+        smode &&
+        scharge > 0 &&
+        ss?.is_ordering_enabled !== false &&
+        isStoreOpen;
+
+      let alert = null;
+      if (!isStoreOpen) {
+        alert = {
+          type: "closed",
+          variant: "warning",
+          message: closedMessage || "Store is currently closed",
+        };
+      } else if (ss?.is_ordering_enabled === false) {
+        alert = {
+          type: "ordering_disabled",
+          variant: "danger",
+          message: "Ordering is currently disabled. Please try again later.",
+        };
+      } else if (
+        smode &&
+        scharge > 0 &&
+        isStoreOpen &&
+        ss?.is_ordering_enabled !== false
+      ) {
+        alert = {
+          type: "surge",
+          variant: "warning",
+          message: smessage || `Surge Charges: ₹${scharge}`,
+        };
+      }
+
+      return {
+        homeAlert: alert,
+        includeSurge: incSurge,
+        surgeCharge: scharge,
+        surgeMessage: smessage,
+        surgeMode: smode,
+      };
+    }, [storeSettings, isStoreOpen, closedMessage]);
 
   useEffect(() => {
     initStore();
@@ -265,6 +320,11 @@ export function ActiveStoreProvider({ children }) {
         storeId: store?.id,
         loading,
         storeSettings,
+        homeAlert,
+        includeSurge,
+        surgeCharge,
+        surgeMessage,
+        surgeMode,
         isStoreOpen,
         closedMessage,
         setActiveStore,
