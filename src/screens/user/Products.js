@@ -30,6 +30,7 @@ import DefaultProduct from "../../../assets/default_product.svg";
 import { cacheGet, cacheSet } from "../../services/cache";
 import { cacheClear } from "../../services/cache";
 import Badge from "../../components/ui/Badge";
+import ProductCard from "./common/productCard";
 
 // Theme tokens
 import { colors, spacing, textSizes, radii, fontWeights } from "../../theme";
@@ -196,88 +197,18 @@ export default function Products() {
     if (p.user_visibility === false) return null;
 
     const qty = cartItems[p.id] || 0;
-    const mrp = p.mrp || p.price;
-    const discount = mrp ? Math.round(((mrp - p.price) / mrp) * 100) : 0;
-
-    const isValidImage = p.image_url?.startsWith("http");
     const isOutOfStock = (p._stock_value ?? 0) <= 0;
-    const isLowStock = (p._stock_value ?? 0) < 5 && (p._stock_value ?? 0) > 0;
 
     return (
-      <View
-        style={[
-          styles.productCard,
-          isOutOfStock && styles.productCardOutOfStock,
-        ]}
-      >
-        {/* Make image area pressable to open Product Details */}
-        <Pressable
-          style={styles.imageWrapper}
-          onPress={() => navigation.navigate("ProductDetails", { product: p })}
-        >
-          {isValidImage ? (
-            <Image
-              source={{ uri: p.image_url }}
-              style={styles.productImage}
-              resizeMode="contain"
-            />
-          ) : (
-            <View style={styles.imageFallbackCenter}>
-              <DefaultProduct width={120} height={120} />
-            </View>
-          )}
-
-          {/* Out of Stock Label */}
-          {isOutOfStock && (
-            <View style={styles.outOfStockOverlay}>
-              <Text style={styles.outOfStockText}>Out of Stock</Text>
-            </View>
-          )}
-
-          {/* Floating ADD / Qty */}
-          {!isOutOfStock && (
-            <QuantitySelector
-              value={qty}
-              variant="advanced"
-              mode="filled"
-              size="sm"
-              onIncrease={() => handleAdd(p)}
-              onDecrease={() => handleRemove(p)}
-              style={styles.floatingControl}
-              disableIncrease={qty >= (p._stock_value ?? 0)}
-            />
-          )}
-        </Pressable>
-
-        {/* Make name/short desc pressable too */}
-        <Pressable
-          onPress={() => navigation.navigate("ProductDetails", { product: p })}
-        >
-          <Text style={styles.productName} numberOfLines={2}>
-            {p.name}
-          </Text>
-          <Text style={styles.shortDesc} numberOfLines={1}>
-            {p.short_desc || ""}
-          </Text>
-        </Pressable>
-
-        <View style={styles.priceRow}>
-          <Text style={styles.price}>₹{p.price}</Text>
-          <Text style={styles.mrp}>₹{mrp}</Text>
-          {discount > 0 && (
-            <Badge
-              size="sm"
-              variant="success"
-              label={`${discount}% OFF`}
-              style={styles.discountBadge}
-            />
-          )}
-        </View>
-
-        {isLowStock && !isOutOfStock && (
-          <Text style={styles.lowStockWarning}>Hurry, only few left</Text>
-        )}
-      </View>
+      <ProductCard
+        product={p}
+        qty={qty}
+        onIncrease={() => handleAdd(p)}
+        onDecrease={() => handleRemove(p)}
+        onPress={() => navigation.navigate("ProductDetails", { product: p })}
+        showQuantityControls={!isOutOfStock}
+        showStockOverlays={true}
+      />
     );
   };
 

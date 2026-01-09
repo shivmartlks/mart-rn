@@ -16,14 +16,18 @@ import SearchCard from "./home/SearchCard";
 import BannerCarousel from "./home/BannerCarousel";
 import CategoriesHorizontal from "./home/CategoriesHorizontal";
 import ProductCardsHorizontal from "./home/ProductCardsHorizontal";
+import { useAuth } from "../../contexts/AuthContext";
+import { addToCart, removeFromCart } from "../../services/cartService";
 
 export default function Home() {
   const navigation = useNavigation();
   const { homeAlert } = useActiveStore();
+  const { user } = useAuth();
   const [featuredCategories, setFeaturedCategories] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [recentProducts, setRecentProducts] = useState([]);
   const [banners, setBanners] = useState([]);
+  const [cartItems, setCartItems] = useState({});
 
   useEffect(() => {
     fetchFeatured();
@@ -34,7 +38,8 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       fetchRecentlyViewed();
-    }, [])
+      loadCartItems();
+    }, [user?.id])
   );
 
   function normalizeImageUrl(u) {
@@ -139,7 +144,23 @@ export default function Home() {
         map[String(p.id)] = p;
       });
       const ordered = ids.map((id) => map[String(id)]).filter(Boolean);
-      setRecentProducts(ordered);
+
+      // Attach inventory for these products
+      const productIds = ordered.map((x) => x.id);
+      let invMap = {};
+      if (productIds.length) {
+        const { data: invRows } = await supabase
+          .from("store_inventory")
+          .select("product_id, stock_value")
+          .in("product_id", productIds);
+        (invRows || []).forEach((r) => (invMap[r.product_id] = r.stock_value));
+      }
+      const withInv = ordered.map((x) => ({
+        ...x,
+        _stock_value: invMap[x.id] ?? 0,
+      }));
+
+      setRecentProducts(withInv);
     } catch (err) {
       setRecentProducts([]);
     }
@@ -172,10 +193,59 @@ export default function Home() {
         .order("name")
         .limit(POPULAR_PRODUCTS_MAX);
 
-      setFeaturedProducts(data || []);
+      // Attach inventory
+      const productIds = (data || []).map((x) => x.id);
+      let invMap = {};
+      if (productIds.length) {
+        const { data: invRows } = await supabase
+          .from("store_inventory")
+          .select("product_id, stock_value")
+          .in("product_id", productIds);
+        (invRows || []).forEach((r) => (invMap[r.product_id] = r.stock_value));
+      }
+      const withInv = (data || []).map((x) => ({
+        ...x,
+        _stock_value: invMap[x.id] ?? 0,
+      }));
+
+      setFeaturedProducts(withInv);
     } catch (err) {
       console.error("Failed loading featured products", err);
       setFeaturedProducts([]);
+    }
+  }
+
+  async function loadCartItems() {
+    if (!user?.id) return;
+    const { data } = await supabase
+      .from("cart_items")
+      .select("product_id, quantity")
+      .eq("user_id", user.id);
+    const map = {};
+    data?.forEach((item) => (map[item.product_id] = item.quantity));
+    setCartItems(map);
+  }
+
+  async function handleAdd(item) {
+    if (!user?.id) return;
+    const res = await addToCart(item.id, user.id);
+    if (!res.error) {
+      const newQty = (cartItems[item.id] || 0) + 1;
+      setCartItems({ ...cartItems, [item.id]: newQty });
+    }
+  }
+
+  async function handleRemove(item) {
+    if (!user?.id) return;
+    const currentQty = cartItems[item.id] || 0;
+    if (currentQty === 0) return;
+    const res = await removeFromCart(item.id, user.id);
+    if (!res.error) {
+      const newQty = currentQty - 1;
+      const updated = { ...cartItems };
+      if (newQty > 0) updated[item.id] = newQty;
+      else delete updated[item.id];
+      setCartItems(updated);
     }
   }
 
@@ -282,6 +352,11 @@ export default function Home() {
             productId: item.id,
           })
         }
+        cartItems={cartItems}
+        onIncrease={handleAdd}
+        onDecrease={handleRemove}
+        showQuantityControls={true}
+        showStockOverlays={true}
       />
 
       {/* Recently Viewed - horizontal list, hidden if none */}
@@ -294,6 +369,11 @@ export default function Home() {
             productId: item.id,
           })
         }
+        cartItems={cartItems}
+        onIncrease={handleAdd}
+        onDecrease={handleRemove}
+        showQuantityControls={true}
+        showStockOverlays={true}
       />
     </ScrollView>
   );
