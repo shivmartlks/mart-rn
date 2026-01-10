@@ -4,6 +4,29 @@ import QuantitySelector from "../../../components/ui/QuantitySelector";
 import Badge from "../../../components/ui/Badge";
 import DefaultProduct from "../../../../assets/default_product.svg";
 import { colors, spacing, textSizes, radii, fontWeights } from "../../../theme";
+import { SUPABASE_URL } from "../../../services/supabase";
+
+function normalizeImageUrl(u) {
+  if (!u) return "";
+  const x = String(u).trim();
+  if (x.startsWith("https://") || x.startsWith("http://")) return x;
+  if (x.startsWith("/")) return `${SUPABASE_URL}${x}`;
+  if (x.startsWith("storage/v1/object/public")) return `${SUPABASE_URL}/${x}`;
+  if (x.startsWith("public/")) return `${SUPABASE_URL}/storage/v1/object/${x}`;
+  return x;
+}
+
+function getPrimaryImage(product) {
+  const imgs = Array.isArray(product?.images) ? product.images : [];
+  if (imgs.length > 0) {
+    const first = imgs[0];
+    const raw =
+      (first && (first.uri || first.url || first.image_url)) ||
+      String(first || "");
+    return normalizeImageUrl(raw);
+  }
+  return normalizeImageUrl(product?.image_url || "");
+}
 
 function ProductCard({
   product,
@@ -18,9 +41,8 @@ function ProductCard({
   if (!product) return null;
   const mrp = product.mrp || product.price;
   const discount = mrp ? Math.round(((mrp - product.price) / mrp) * 100) : 0;
-  const isValidImage =
-    typeof product.image_url === "string" &&
-    product.image_url.startsWith("http");
+  const imageUri = getPrimaryImage(product);
+  const hasImage = typeof imageUri === "string" && imageUri.startsWith("http");
   const stockValue = Number(product._stock_value ?? 0);
   const isOutOfStock = stockValue <= 0;
   const isLowStock = stockValue < 5 && stockValue > 0;
@@ -35,9 +57,9 @@ function ProductCard({
       ]}
     >
       <Pressable style={styles.imageWrapper} onPress={onPress}>
-        {isValidImage ? (
+        {hasImage ? (
           <Image
-            source={{ uri: product.image_url }}
+            source={{ uri: encodeURI(imageUri) }}
             style={styles.productImage}
             resizeMode="contain"
           />

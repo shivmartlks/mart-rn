@@ -9,7 +9,7 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import { supabase } from "../../services/supabase";
+import { supabase, SUPABASE_URL } from "../../services/supabase";
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../../contexts/AuthContext";
 import { IMAGES } from "../../const/imageConst";
@@ -45,16 +45,63 @@ export default function Wishlist() {
     }, [user])
   );
 
+  function normalizeImageUrl(u) {
+    if (!u) return "";
+    const x = String(u).trim();
+    if (x.startsWith("https://") || x.startsWith("http://")) return x;
+    if (x.startsWith("/")) return `${SUPABASE_URL}${x}`;
+    if (x.startsWith("storage/v1/object/public")) return `${SUPABASE_URL}/${x}`;
+    if (x.startsWith("public/"))
+      return `${SUPABASE_URL}/storage/v1/object/${x}`;
+    return x;
+  }
+
+  async function fetchImagesForWishlist(productIds) {
+    if (!Array.isArray(productIds) || productIds.length === 0) return {};
+    try {
+      const { data, error } = await supabase
+        .from("product_images")
+        .select("*")
+        .in("product_id", productIds)
+        .order("sort_order", { ascending: true });
+      if (error) {
+        console.log("[Wishlist] product_images error", error);
+        return {};
+      }
+      console.log(
+        "[Wishlist] product_images rows",
+        Array.isArray(data) ? data.length : 0,
+        Array.isArray(data) ? data.slice(0, 3) : []
+      );
+      const map = {};
+      (data || []).forEach((row) => {
+        const pid = row.product_id ?? row.productId ?? row.product ?? null;
+        const uri =
+          row.image_url ||
+          row.url ||
+          row.path ||
+          row.uri ||
+          row.file_path ||
+          row.src ||
+          "";
+        if (!pid || !uri) return;
+        if (!map[pid]) map[pid] = [];
+        map[pid].push({ uri });
+      });
+      console.log("[Wishlist] built imagesMap", map);
+      return map;
+    } catch (e) {
+      console.log("[Wishlist] fetchImagesForWishlist exception", e);
+      return {};
+    }
+  }
+
   // -----------------------------------------------------
   // Load wishlist items (robust, merge products separately)
   // -----------------------------------------------------
   async function loadWishlist() {
     setLoading(true);
     const cacheKey = user ? `wishlist:${user.id}` : null;
-    if (cacheKey) {
-      const cached = cacheGet(cacheKey);
-      if (cached) setItems(cached);
-    }
 
     // Fetch base wishlist rows first
     const { data: rawRows, error: baseErr } = await supabase
@@ -69,7 +116,7 @@ export default function Wishlist() {
       new Set(raw.map((r) => r.product_id).filter(Boolean))
     );
 
-    // Try to fetch product info via store_inventory relation (works when products select may be restricted)
+    // Fetch product info via store_inventory relation
     let prodMap = {};
     if (productIds.length) {
       try {
@@ -82,9 +129,7 @@ export default function Wishlist() {
         (invRows || []).forEach((r) => {
           if (r?.products) prodMap[r.product_id] = r.products;
         });
-      } catch (e) {
-        // ignore and fallback
-      }
+      } catch (e) {}
     }
 
     // For any remaining product ids, fetch directly from products table
@@ -96,62 +141,71 @@ export default function Wishlist() {
           .select("id, name, price, mrp, image_url, short_desc")
           .in("id", missing);
         (prodRows || []).forEach((p) => (prodMap[p.id] = p));
-      } catch (e) {
-        // ignore
-      }
+      } catch (e) {}
     }
 
-    // Merge
+    // Merge base + products (do not set state yet)
     const merged = raw.map((r) => ({
       ...r,
       products: prodMap[r.product_id] || null,
     }));
 
-    setItems(merged);
-    if (cacheKey) cacheSet(cacheKey, merged, 5 * 60 * 1000);
+    // Attach first image from product_images for each product
+    const ids = merged.map((m) => m.product_id).filter(Boolean);
+    let imgMap = {};
+    if (ids.length) {
+      imgMap = await fetchImagesForWishlist(ids);
+    }
+    const mergedWithImages = merged.map((m) => {
+      const p = m.products || {};
+      const images = imgMap[m.product_id] || [];
+      return { ...m, products: { ...p, images } };
+    });
+
+    // Set final items once to avoid flicker
+    setItems(mergedWithImages);
+    if (cacheKey) cacheSet(cacheKey, mergedWithImages, 5 * 60 * 1000);
     setLoading(false);
 
-    // Background reconciliation for missing product details
+    // Background reconciliation for missing product details (preserve images/name)
     const missingIds = merged
       .filter((m) => !m.products)
       .map((m) => m.product_id);
     if (missingIds.length) {
-      const debug = {
-        missing: missingIds,
-        fetchedFromInventory: Object.keys(prodMap),
-      };
-      // debug logging removed
-
       for (const pid of missingIds) {
         try {
-          const { data, error } = await fetchProductWithAttributes(pid);
+          const { data } = await fetchProductWithAttributes(pid);
           const prod = data?.product || null;
           if (prod) {
             setItems((prev) =>
-              prev.map((it) =>
-                it.product_id === pid
-                  ? {
-                      ...it,
-                      products: {
-                        ...prod,
-                        price: Number(prod.price) || 0,
-                        mrp: Number(prod.mrp) || Number(prod.price) || 0,
-                      },
-                    }
-                  : it
-              )
+              prev.map((it) => {
+                if (it.product_id !== pid) return it;
+                const existing = it.products || {};
+                return {
+                  ...it,
+                  products: {
+                    ...existing,
+                    ...prod,
+                    price: Number(prod.price ?? existing.price ?? 0) || 0,
+                    mrp:
+                      Number(
+                        prod.mrp ??
+                          existing.mrp ??
+                          prod.price ??
+                          existing.price ??
+                          0
+                      ) || 0,
+                    images: Array.isArray(existing.images)
+                      ? existing.images
+                      : [],
+                    name: prod.name ?? existing.name ?? `Product #${pid}`,
+                  },
+                };
+              })
             );
-            if (cacheKey) {
-              const updated = (cacheGet(cacheKey) || []).map((it) =>
-                it.product_id === pid ? { ...it, products: prod } : it
-              );
-              cacheSet(cacheKey, updated, 5 * 60 * 1000);
-            }
             continue;
           }
-        } catch (e) {
-          // fetch fallback failed; swallow error silently
-        }
+        } catch {}
 
         try {
           const { data: prodRow } = await supabase
@@ -160,27 +214,38 @@ export default function Wishlist() {
             .eq("id", pid)
             .maybeSingle();
           if (prodRow) {
-            const prod = {
-              ...prodRow,
-              price: Number(prodRow.price) || 0,
-              mrp: Number(prodRow.mrp) || Number(prodRow.price) || 0,
-            };
             setItems((prev) =>
-              prev.map((it) =>
-                it.product_id === pid ? { ...it, products: prod } : it
-              )
+              prev.map((it) => {
+                if (it.product_id !== pid) return it;
+                const existing = it.products || {};
+                const prod = {
+                  ...prodRow,
+                  price: Number(prodRow.price ?? existing.price ?? 0) || 0,
+                  mrp:
+                    Number(
+                      prodRow.mrp ??
+                        existing.mrp ??
+                        prodRow.price ??
+                        existing.price ??
+                        0
+                    ) || 0,
+                };
+                return {
+                  ...it,
+                  products: {
+                    ...existing,
+                    ...prod,
+                    images: Array.isArray(existing.images)
+                      ? existing.images
+                      : [],
+                    name: prod.name ?? existing.name ?? `Product #${pid}`,
+                  },
+                };
+              })
             );
-            if (cacheKey) {
-              const updated = (cacheGet(cacheKey) || []).map((it) =>
-                it.product_id === pid ? { ...it, products: prod } : it
-              );
-              cacheSet(cacheKey, updated, 5 * 60 * 1000);
-            }
             continue;
           }
-        } catch (e) {
-          // fallback fetch failed; swallow error silently
-        }
+        } catch {}
       }
     }
   }
@@ -289,10 +354,19 @@ export default function Wishlist() {
         {/* List of wishlist items */}
         {items.map((i) => {
           const p = i.products || {};
+          const firstImg =
+            Array.isArray(p.images) && p.images.length > 0
+              ? p.images[0]?.uri
+              : null;
+          const resolvedUri = normalizeImageUrl(firstImg || p.image_url || "");
+          try {
+            console.log("[Wishlist] item", i.product_id, {
+              firstImg,
+              resolvedUri,
+            });
+          } catch {}
           const isValidImage =
-            p.image_url &&
-            typeof p.image_url === "string" &&
-            p.image_url.startsWith("http");
+            typeof resolvedUri === "string" && resolvedUri.startsWith("http");
           const price = Number(p.price) || 0;
           const mrp = Number(p.mrp) || price;
           const discount = mrp ? Math.round(((mrp - price) / mrp) * 100) : 0;
@@ -303,13 +377,18 @@ export default function Wishlist() {
                 onPress={() =>
                   navigation.navigate("ProductDetails", {
                     product: p || { id: i.product_id },
+                    productId: i.product_id,
                   })
                 }
                 style={{ flexDirection: "row" }}
               >
                 {/* IMAGE */}
                 <Image
-                  source={isValidImage ? { uri: p.image_url } : IMAGES.default}
+                  source={
+                    isValidImage
+                      ? { uri: encodeURI(resolvedUri) }
+                      : IMAGES.default
+                  }
                   style={{
                     width: 70,
                     height: 70,
@@ -329,7 +408,7 @@ export default function Wishlist() {
                     }}
                     numberOfLines={1}
                   >
-                    {p.name || `Product #${i.product_id}`}
+                    {p.name || ""}
                   </Text>
                   <Text
                     style={{

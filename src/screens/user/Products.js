@@ -116,6 +116,54 @@ export default function Products() {
         prev.map((x) => ({ ...x, _stock_value: invMap[x.id] ?? 0 }))
       );
 
+      // Fetch first images from product_images and attach to products
+      if (productIds.length) {
+        const { data: imgRows, error: imgErr } = await supabase
+          .from("product_images")
+          .select("*")
+          .in("product_id", productIds)
+          .order("sort_order", { ascending: true });
+        if (imgErr) console.log("[Products] product_images error", imgErr);
+        console.log(
+          "[Products] product_images rows",
+          Array.isArray(imgRows) ? imgRows.length : 0,
+          Array.isArray(imgRows) ? imgRows.slice(0, 3) : []
+        );
+        const imgMap = {};
+        (imgRows || []).forEach((row) => {
+          const pid = row.product_id ?? row.productId ?? row.product ?? null;
+          const uri =
+            row.image_url ||
+            row.url ||
+            row.path ||
+            row.uri ||
+            row.file_path ||
+            row.src ||
+            "";
+          if (!pid || !uri) return;
+          if (!imgMap[pid]) imgMap[pid] = [];
+          imgMap[pid].push({ uri });
+        });
+        console.log("[Products] built imagesMap", imgMap);
+        setProducts((prev) =>
+          prev.map((x) => ({ ...x, images: imgMap[x.id] || [] }))
+        );
+        // Log imagesLen after attachment
+        setProducts((prev) => {
+          try {
+            console.log(
+              "[Products] products with images",
+              prev.map((pp) => ({
+                id: pp.id,
+                imagesLen: Array.isArray(pp.images) ? pp.images.length : 0,
+                first: pp.images?.[0]?.uri,
+              }))
+            );
+          } catch {}
+          return prev;
+        });
+      }
+
       if (user) {
         const count = await getCartCount(user.id);
         setCartCount(count);

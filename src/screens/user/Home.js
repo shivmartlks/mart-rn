@@ -53,6 +53,44 @@ export default function Home() {
     return x;
   }
 
+  async function fetchProductImagesMap(productIds) {
+    const ids = Array.isArray(productIds)
+      ? Array.from(new Set(productIds))
+      : [];
+    if (ids.length === 0) return {};
+    try {
+      const { data, error } = await supabase
+        .from("product_images")
+        .select("*")
+        .in("product_id", ids)
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        console.log("[Home] product_images error", error);
+        return {};
+      }
+      console.log(
+        "[Home] product_images rows",
+        Array.isArray(data) ? data.length : 0
+      );
+
+      const map = {};
+      (data || []).forEach((row) => {
+        const pid = row.product_id ?? row.productId ?? row.product ?? null;
+        const uriCandidate =
+          row.image_url || row.url || row.path || row.uri || "";
+        if (!pid) return;
+        if (!map[pid]) map[pid] = [];
+        if (uriCandidate) map[pid].push({ uri: uriCandidate });
+      });
+      console.log("[Home] built imagesMap", map);
+      return map;
+    } catch (e) {
+      console.log("[Home] fetchProductImagesMap exception", e);
+      return {};
+    }
+  }
+
   async function fetchBanners() {
     try {
       const data = await fetchHomeBanners();
@@ -155,9 +193,13 @@ export default function Home() {
           .in("product_id", productIds);
         (invRows || []).forEach((r) => (invMap[r.product_id] = r.stock_value));
       }
+      // Attach first images
+      const imagesMap = await fetchProductImagesMap(productIds);
+
       const withInv = ordered.map((x) => ({
         ...x,
         _stock_value: invMap[x.id] ?? 0,
+        images: imagesMap[x.id] || [],
       }));
 
       setRecentProducts(withInv);
@@ -203,9 +245,13 @@ export default function Home() {
           .in("product_id", productIds);
         (invRows || []).forEach((r) => (invMap[r.product_id] = r.stock_value));
       }
+      // Attach first images
+      const imagesMap = await fetchProductImagesMap(productIds);
+
       const withInv = (data || []).map((x) => ({
         ...x,
         _stock_value: invMap[x.id] ?? 0,
+        images: imagesMap[x.id] || [],
       }));
 
       setFeaturedProducts(withInv);
