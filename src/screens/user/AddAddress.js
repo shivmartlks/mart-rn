@@ -36,33 +36,48 @@ export default function AddAddress() {
   const [errors, setErrors] = useState({ address: "", pincode: "", phone: "" });
   const [hasLocation, setHasLocation] = useState(false);
 
+  const canSave =
+    !saving &&
+    address.trim().length > 0 &&
+    pincode.trim().length === 6 &&
+    phone.trim().length >= 10 &&
+    (serviceable === null || serviceable === true);
+
   useEffect(() => {
     checkIfFirstAddress();
   }, []);
 
   async function checkIfFirstAddress() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("addresses")
       .select("id")
       .eq("user_id", user.id);
-
+    if (error) console.log("[AddAddress] checkIfFirstAddress error", error);
+    console.log(
+      "[AddAddress] existing addresses count",
+      Array.isArray(data) ? data.length : 0
+    );
     setIsFirstAddress(!data || data.length === 0);
   }
 
   async function checkServiceability(pin) {
+    console.log("[AddAddress] checkServiceability pin", pin);
     if (pin.length !== 6) return;
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("serviceable_pincodes")
       .select("*")
       .eq("pincode", pin)
       .maybeSingle();
-
+    if (error) console.log("[AddAddress] serviceability error", error);
+    console.log("[AddAddress] serviceability data", data);
     setServiceable(!!data);
   }
 
   async function getCurrentLocation() {
+    console.log("[AddAddress] requesting location permission");
     let { status } = await Location.requestForegroundPermissionsAsync();
+    console.log("[AddAddress] permission status", status);
     if (status !== "granted") {
       Alert.alert("Permission denied", "Location permission is required.");
       return;
@@ -71,9 +86,10 @@ export default function AddAddress() {
     const loc = await Location.getCurrentPositionAsync({});
     const latitude = loc.coords.latitude;
     const longitude = loc.coords.longitude;
+    console.log("[AddAddress] current coords", { latitude, longitude });
 
     setCoords({ lat: latitude, lng: longitude });
-    setHasLocation(true); // update immediately so the UI switches from the pre-fetch message
+    setHasLocation(true);
 
     try {
       const res = await fetch(
@@ -86,6 +102,10 @@ export default function AddAddress() {
         }
       );
       const json = await res.json();
+      console.log("[AddAddress] reverse geocode response", {
+        display: json?.display_name,
+        pin: json?.address?.postcode,
+      });
 
       const display = json?.display_name || "";
       const pin = json?.address?.postcode || "";
@@ -94,31 +114,49 @@ export default function AddAddress() {
       setPincode(pin);
       if (pin) checkServiceability(pin);
 
-      // clear any prior errors for autofilled fields
       setErrors((prev) => ({ ...prev, address: "", pincode: "" }));
     } catch (e) {
-      // keep hasLocation true; user can still input manually
+      console.log("[AddAddress] reverse geocode error", e);
     }
   }
 
   function validateFields() {
     const next = { address: "", pincode: "", phone: "" };
-    if (!hasLocation)
-      next.address = "Please use current location to autofill address";
-    if (!address.trim())
-      next.address = next.address || "Full Address is required";
+    // Removed hard requirement for hasLocation; allow manual address entry
+    if (!address.trim()) next.address = "Full Address is required";
     if (!pincode.trim()) next.pincode = "Pincode is required";
     else if (pincode.length !== 6) next.pincode = "Pincode must be 6 digits";
     if (!phone.trim()) next.phone = "Phone number is required";
     else if (phone.length < 10) next.phone = "Enter a valid phone number";
     setErrors(next);
-    return !next.address && !next.pincode && !next.phone;
+    const ok = !next.address && !next.pincode && !next.phone;
+    console.log("[AddAddress] validate", {
+      ok,
+      next,
+      hasLocation,
+      address,
+      pincode,
+      phone,
+    });
+    return ok;
   }
 
   async function saveAddress() {
-    // Inline validation without alerts
+    console.log("[AddAddress] save attempt", {
+      userId: user?.id,
+      label,
+      address,
+      pincode,
+      phone,
+      instructions,
+      coords,
+      serviceable,
+      isDefault,
+      isFirstAddress,
+    });
     if (!validateFields()) return;
     if (serviceable === false) {
+      console.log("[AddAddress] not serviceable", pincode);
       setErrors((e) => ({
         ...e,
         pincode: "Delivery not available in this area",
@@ -128,7 +166,7 @@ export default function AddAddress() {
 
     setSaving(true);
     try {
-      const { error } = await supabase.from("addresses").insert({
+      const payload = {
         user_id: user.id,
         label,
         address_line: address,
@@ -138,13 +176,17 @@ export default function AddAddress() {
         latitude: coords.lat,
         longitude: coords.lng,
         is_default: isFirstAddress ? true : isDefault,
-      });
-
+      };
+      console.log("[AddAddress] insert payload", payload);
+      const { data, error } = await supabase
+        .from("addresses")
+        .insert(payload)
+        .select("id");
+      console.log("[AddAddress] insert response", { data, error });
       if (error) throw error;
-
-      // Navigate to Cart tab inside UserTabs
       navigation.navigate("UserTabs", { screen: "Cart" });
     } catch (err) {
+      console.log("[AddAddress] saveAddress error", err);
       Alert.alert("Error", err.message || "Failed to save address.");
     } finally {
       setSaving(false);
@@ -201,7 +243,7 @@ export default function AddAddress() {
             )
           ) : (
             <Text style={{ color: colors.textSecondary }}>
-              You must fetch your location before saving.
+              You can save without fetching location; please fill the address.
             </Text>
           )}
         </Card>
@@ -384,7 +426,7 @@ export default function AddAddress() {
             block
             size="lg"
             loading={saving}
-            disabled={saving || !hasLocation}
+            disabled={!canSave}
             onPress={saveAddress}
           >
             Save Address

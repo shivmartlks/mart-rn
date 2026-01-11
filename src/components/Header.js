@@ -31,9 +31,9 @@ export default function Header({ title = "Home", showBack = false }) {
         </View>
 
         {/* Right */}
-        <TouchableOpacity style={styles.searchButton}>
+        {/* <TouchableOpacity style={styles.searchButton}>
           <Feather name="search" size={20} color="#333" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </SafeAreaView>
   );
