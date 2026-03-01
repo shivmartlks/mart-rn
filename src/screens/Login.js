@@ -9,6 +9,31 @@ import Button from "../components/ui/Button";
 import { spacing, colors, textSizes } from "../theme";
 import Logo from "../../assets/logo.svg";
 
+async function handleGoogleSignIn() {
+  try {
+    await GoogleSignin.hasPlayServices();
+
+    const userInfo = await GoogleSignin.signIn();
+    const idToken = userInfo?.idToken;
+
+    if (!idToken) {
+      throw new Error("idToken missing from Google response");
+    }
+
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: "google",
+      token: idToken,
+    });
+
+    if (error) throw error;
+
+    return data;
+  } catch (error) {
+    console.error("Google Sign-In error:", error);
+    throw error;
+  }
+}
+
 export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -57,28 +82,10 @@ export default function Login() {
               setLoading(true);
               setError("");
 
-              await GoogleSignin.hasPlayServices();
-
-              const userInfo = await GoogleSignin.signIn();
-
-              console.log("Google response:", userInfo);
-
-              const idToken = userInfo?.data?.idToken;
-
-              if (!idToken) {
-                throw new Error("idToken missing from Google response");
-              }
-
-              const { data, error } = await supabase.auth.signInWithIdToken({
-                provider: "google",
-                token: idToken,
-              });
-
-              if (error) throw error;
-
+              const data = await handleGoogleSignIn();
               console.log("Supabase login success:", data);
             } catch (err) {
-              console.log("Login error:", err);
+              console.error("Login error:", err);
               setError(err.message);
             } finally {
               setLoading(false);
