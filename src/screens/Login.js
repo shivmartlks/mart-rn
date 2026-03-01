@@ -1,32 +1,17 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text } from "react-native";
 import { supabase } from "../services/supabase";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
-import Input from "../components/ui/Input";
 
-import { spacing, colors, textSizes, fontWeights } from "../theme";
+import { spacing, colors, textSizes } from "../theme";
 import Logo from "../../assets/logo.svg";
 
-export default function Login({ navigation }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  async function handleLogin() {
-    setError("");
-    setLoading(true);
-
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setLoading(false);
-    if (authError) setError(authError.message);
-  }
 
   return (
     <View
@@ -37,40 +22,19 @@ export default function Login({ navigation }) {
         backgroundColor: colors.screenBG,
       }}
     >
-      {/* Removed top logo above the login card */}
-
-      {/* Centered Card */}
       <Card
         elevated
         style={{
           paddingVertical: spacing.xl,
           paddingHorizontal: spacing.xl,
-          maxWidth: 420, // ⭐ visually tighter layout
-          alignSelf: "center", // ⭐ centers card on big screens
+          maxWidth: 420,
+          alignSelf: "center",
           width: "100%",
         }}
       >
-        {/* Replace heading text with logo */}
-        <View style={{ alignItems: "center", marginBottom: spacing.lg }}>
+        <View style={{ alignItems: "center", marginBottom: spacing.xl }}>
           <Logo width={200} height={52} color="#111111" />
         </View>
-
-        <Input
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          size="md"
-          style={{ marginBottom: spacing.md }}
-        />
-
-        <Input
-          placeholder="Password"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          size="md"
-          style={{ marginBottom: spacing.sm }}
-        />
 
         {error ? (
           <Text
@@ -78,6 +42,7 @@ export default function Login({ navigation }) {
               color: colors.error,
               fontSize: textSizes.sm,
               marginBottom: spacing.md,
+              textAlign: "center",
             }}
           >
             {error}
@@ -87,55 +52,44 @@ export default function Login({ navigation }) {
         <Button
           block
           size="md"
-          onPress={handleLogin}
+          onPress={async () => {
+            try {
+              setLoading(true);
+              setError("");
+
+              await GoogleSignin.hasPlayServices();
+
+              const userInfo = await GoogleSignin.signIn();
+
+              console.log("Google response:", userInfo);
+
+              const idToken = userInfo?.data?.idToken;
+
+              if (!idToken) {
+                throw new Error("idToken missing from Google response");
+              }
+
+              const { data, error } = await supabase.auth.signInWithIdToken({
+                provider: "google",
+                token: idToken,
+              });
+
+              if (error) throw error;
+
+              console.log("Supabase login success:", data);
+            } catch (err) {
+              console.log("Login error:", err);
+              setError(err.message);
+            } finally {
+              setLoading(false);
+            }
+          }}
           loading={loading}
           disabled={loading}
-          style={{ marginTop: spacing.sm }}
         >
-          Login
+          Continue with Google
         </Button>
-
-        <TouchableOpacity
-          style={{ marginTop: spacing.md }}
-          onPress={() => navigation.navigate("ForgotPassword")}
-        >
-          <Text
-            style={{
-              textAlign: "center",
-              color: colors.primary,
-              fontSize: textSizes.sm,
-            }}
-          >
-            Forgot Password?
-          </Text>
-        </TouchableOpacity>
       </Card>
-
-      {/* Signup */}
-      <View
-        style={{
-          marginTop: spacing.lg,
-          flexDirection: "row",
-          justifyContent: "center",
-        }}
-      >
-        <Text style={{ color: colors.textMuted, fontSize: textSizes.sm }}>
-          Don’t have an account?
-        </Text>
-
-        <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-          <Text
-            style={{
-              marginLeft: spacing.xs,
-              color: colors.primary,
-              fontSize: textSizes.sm,
-              fontWeight: fontWeights.medium,
-            }}
-          >
-            Sign up
-          </Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }

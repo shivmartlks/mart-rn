@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "230796169131",
+    "project_id": "shivmartauth",
+    "storage_bucket": "shivmartauth.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:230796169131:android:d7b4e2416e7ffe4ef38cee",
+        "android_client_info": {
+          "package_name": "com.shivmart.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "230796169131-4u26n7t0adq4n4dda7oks60rqqiu70rb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAmFkeJh6QCfms3ICmB9X4KZkpFQTtUIWU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "230796169131-4u26n7t0adq4n4dda7oks60rqqiu70rb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

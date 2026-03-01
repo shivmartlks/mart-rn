@@ -1,3 +1,4 @@
+import "./src/auth/googleConfig";
 import { NavigationContainer } from "@react-navigation/native";
 import RootNavigator from "./src/navigation/RootNavigator";
 import { AuthProvider } from "./src/contexts/AuthContext";
